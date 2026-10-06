@@ -453,15 +453,11 @@
 
   // ---- Dati ----
   function defaultState() {
-    const cats = [
-      { id: uid(), name: 'Lavoro', color: PALETTE[0] },
-      { id: uid(), name: 'Allenamento (corsa)', color: PALETTE[1] },
-      { id: uid(), name: 'Python', color: PALETTE[2] },
-    ];
+    // Si parte senza categorie: ognuno crea le proprie (o le riceve dalla sincronizzazione)
     return {
       version: 1,
       updatedAt: Date.now(),
-      categories: cats,
+      categories: [],
       goals: [],          // { id, categoryId, title } — si ripetono ogni settimana
       weeks: {},          // { [weekKey]: { done: { goalId: categoryId }, snapshot: [{id,name,color,total}] } }
       longTerm: [],       // { id, title, unit, current, total, color }
@@ -611,7 +607,12 @@
 
     const wrap = $('#categories');
     if (!state.categories.length) {
-      wrap.innerHTML = '<div class="card empty">Nessuna categoria. Tocca “Modifica” per aggiungerne una.</div>';
+      wrap.innerHTML = `<div class="card empty">
+        <strong style="display:block; color:var(--text); font-size:1.1rem; margin-bottom:6px">Benvenuto in Quest Week!</strong>
+        Crea una categoria (per esempio Lavoro, Allenamento, Studio) e aggiungi i tuoi obiettivi della settimana.
+        <div style="margin-top:14px"><button class="primary" data-act="start">+ Crea la prima categoria</button></div>
+        ${session ? '' : '<div class="sub" style="margin-top:12px">Hai già un account? Accedi da Impostazioni → Sincronizzazione.</div>'}
+      </div>`;
       return;
     }
     wrap.innerHTML = state.categories.map(c => {
@@ -775,6 +776,10 @@
         break;
       case 'color': cat.color = btn.dataset.color; save(); break;
       case 'card-bg-reset': cat.cardBg = null; save(); break;
+      case 'start': // pulsante del messaggio di benvenuto: apre la modalità Modifica sul campo "Nuova categoria"
+        if (!document.body.classList.contains('editing')) $('#editBtn').click();
+        $('#newCatName').focus();
+        break;
       case 'rename-goal': {
         const v = await openDialog({
           title: 'Modifica obiettivo',
