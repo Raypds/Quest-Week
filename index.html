@@ -87,6 +87,15 @@
   .edit-only { display: none !important; }
   body.editing .edit-only { display: flex !important; }
   body.editing button.edit-only { display: inline-block !important; }
+  /* Modifica di un solo riquadro (pulsante con la matita) */
+  .card.editing .edit-only { display: flex !important; }
+  .card.editing button.edit-only { display: inline-block !important; }
+  .qedit { flex: none; width: 32px; height: 32px; padding: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); background: var(--field, var(--bg)); color: var(--muted); }
+  .qedit svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .card.editing .qedit { background: var(--accent); border-color: var(--accent); color: #fff; }
   .empty { color: var(--muted); text-align: center; padding: 24px 8px; }
 
   /* Lungo termine */
@@ -637,10 +646,11 @@
       const goals = state.goals.filter(g => g.categoryId === c.id);
       const d = goals.filter(g => w.done[g.id]).length;
       return `
-      <div class="card" style="--c:${c.color};${cardVars(c.cardBg)}" data-cat="${c.id}">
+      <div class="card${editingCards.has(c.id) ? ' editing' : ''}" style="--c:${c.color};${cardVars(c.cardBg)}" data-cat="${c.id}">
         <div class="cat-head">
           <span class="dot"></span>
           <span class="cat-name grow">${esc(c.name)}</span>
+          <button class="qedit" data-act="card-edit" title="${editingCards.has(c.id) ? 'Chiudi modifica' : 'Modifica'}" aria-pressed="${editingCards.has(c.id)}"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
           <span class="pct">${d} / ${goals.length}</span>
           <button class="ghost edit-only" data-act="rename-cat" title="Rinomina">✎</button>
           <button class="ghost danger edit-only" data-act="del-cat" title="Elimina">✕</button>
@@ -676,6 +686,15 @@
     });
   }
   const lastPct = {};
+  const editingCards = new Set(); // id delle categorie / obiettivi a lungo termine aperti con la matita
+  function toggleCardEdit(btn, id) {
+    const card = btn.closest('.card');
+    const on = !editingCards.has(id);
+    if (on) editingCards.add(id); else editingCards.delete(id);
+    card.classList.toggle('editing', on);
+    btn.setAttribute('aria-pressed', on);
+    btn.title = on ? 'Chiudi modifica' : 'Modifica';
+  }
 
   // Controlli colore di una singola attività (visibili solo in modalità Modifica):
   // colore della barra + colore di sfondo del riquadro.
@@ -700,10 +719,11 @@
     wrap.innerHTML = state.longTerm.map(l => {
       const done = l.current >= l.total;
       return `
-      <div class="card" style="--c:${l.color};${cardVars(l.cardBg)}" data-lt="${l.id}">
+      <div class="card${editingCards.has(l.id) ? ' editing' : ''}" style="--c:${l.color};${cardVars(l.cardBg)}" data-lt="${l.id}">
         <div class="cat-head" style="margin-bottom:8px">
           <span class="dot"></span>
           <span class="cat-name grow">${esc(l.title)}${done ? ' ✓' : ''}</span>
+          <button class="qedit" data-act="card-edit" title="${editingCards.has(l.id) ? 'Chiudi modifica' : 'Modifica'}" aria-pressed="${editingCards.has(l.id)}"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg></button>
           <span class="pct">${fmt(l.current)} su ${fmt(l.total)} ${esc(l.unit || '')}</span>
           <button class="ghost edit-only" data-act="edit-lt" title="Modifica">✎</button>
           <button class="ghost danger edit-only" data-act="del-lt" title="Elimina">✕</button>
@@ -794,6 +814,7 @@
         break;
       case 'color': cat.color = btn.dataset.color; save(); break;
       case 'card-bg-reset': cat.cardBg = null; save(); break;
+      case 'card-edit': toggleCardEdit(btn, cid); break;
       case 'start': // pulsante del messaggio di benvenuto: apre la modalità Modifica sul campo "Nuova categoria"
         if (!document.body.classList.contains('editing')) $('#editBtn').click();
         $('#newCatName').focus();
@@ -870,6 +891,7 @@
       case 'lt-step': setLongValue(lt, lt.current + Number(btn.dataset.d)); break;
       case 'color': lt.color = btn.dataset.color; save(); break;
       case 'card-bg-reset': lt.cardBg = null; save(); break;
+      case 'card-edit': toggleCardEdit(btn, lt.id); break;
       case 'edit-lt': {
         const v = await openDialog({
           title: 'Modifica obiettivo',

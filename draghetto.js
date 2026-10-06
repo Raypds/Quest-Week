@@ -88,6 +88,10 @@ svg{width:100%;height:auto;display:block;overflow:hidden}
 .waddle{transform-box:fill-box;transform-origin:50% 100%;animation:wad .45s ease-in-out infinite alternate}
 @keyframes walk{0%{transform:translateX(0);opacity:0}5%{opacity:1}95%{opacity:1}100%{transform:translateX(-500px);opacity:0}}
 @keyframes wad{from{transform:rotate(-5deg)}to{transform:rotate(5deg) translateY(-2px)}}
+.spook{fill:#1a1a1a;animation:spk 7s step-end infinite}
+@keyframes spk{0%{fill:#1a1a1a;filter:none}42.857%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}50%{fill:#1a1a1a;filter:none}57.143%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}64.286%{fill:#1a1a1a;filter:none}71.429%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}78.571%{fill:#1a1a1a;filter:none}85.714%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}92.857%{fill:#1a1a1a;filter:none}100%{fill:#1a1a1a;filter:none}}
+.spook2{color:#1a1a1a;fill:currentColor;animation:spk2 7s step-end infinite}
+@keyframes spk2{0%{color:#1a1a1a;filter:none}50%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}57.143%{color:#1a1a1a;filter:none}64.286%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}71.429%{color:#1a1a1a;filter:none}78.571%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}85.714%{color:#1a1a1a;filter:none}92.857%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}100%{color:#1a1a1a;filter:none}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 `;
 
@@ -172,6 +176,17 @@ ${gift(196,318,28,26,'#E24B4A','#F2C230')}${gift(228,328,22,16,'#378ADD','#fff')
 
   const BIRD = '<path d="M388 44 L376 38 L381 50 Z" fill="#185FA5"/><ellipse cx="400" cy="44" rx="14" ry="10" fill="#378ADD"/><circle cx="412" cy="34" r="8" fill="#378ADD"/><ellipse cx="402" cy="47" rx="8" ry="5" fill="#B5D4F4"/><path class="bw" d="M392 42 Q400 36 406 44 Q398 48 392 42 Z" fill="#185FA5"/><polygon points="419,32 427,35 419,37" fill="#EF9F27"/><circle cx="414" cy="31" r="1.8" fill="#0E2A1E"/><path d="M398 53 V57 M404 53 V57" stroke="#EF9F27" stroke-width="2"/>';
   const OWL = '<ellipse cx="278" cy="38" rx="13" ry="15" fill="#8A5A34"/><polygon points="267,30 265,17 274,26" fill="#8A5A34"/><polygon points="289,30 291,17 282,26" fill="#8A5A34"/><ellipse cx="278" cy="44" rx="8" ry="8" fill="#D9B98A"/><ellipse class="bw" cx="266" cy="41" rx="4" ry="9" fill="#6B4226"/><ellipse class="bw" cx="290" cy="41" rx="4" ry="9" fill="#6B4226"/><circle cx="273" cy="31" r="5" fill="#F2C230"/><circle cx="283" cy="31" r="5" fill="#F2C230"/><circle cx="273" cy="31" r="2.3" fill="#1a1a1a"/><circle cx="283" cy="31" r="2.3" fill="#1a1a1a"/><polygon points="276,35 280,35 278,40" fill="#E07B2A"/><path d="M274 53 V57 M282 53 V57" stroke="#E07B2A" stroke-width="2"/>';
+  // alberi spogli dell'autunno: facce incise che lampeggiano a turno (mai accese insieme)
+  const bareTree = (x, face) => `
+<path d="M${x-26} 346 Q${x-18} 300 ${x-16} 230 Q${x-16} 190 ${x-30} 150 L${x-22} 146 Q${x-6} 180 ${x-4} 200 Q${x+2} 170 ${x+22} 130 L${x+30} 136 Q${x+14} 180 ${x+16} 230 Q${x+18} 300 ${x+26} 346 Z" fill="#7A5636"/>
+<path d="M${x-26} 152 Q${x-48} 120 ${x-44} 88 M${x+26} 134 Q${x+40} 100 ${x+30} 68 M${x-4} 196 Q${x} 150 ${x-6} 112" fill="none" stroke="#7A5636" stroke-width="7" stroke-linecap="round"/>
+<path d="M${x-38} 128 Q${x-58} 124 ${x-66} 106 M${x-44} 104 Q${x-30} 92 ${x-28} 76 M${x+34} 112 Q${x+54} 104 ${x+62} 86 M${x+33} 88 Q${x+20} 76 ${x+18} 62 M${x-5} 140 Q${x+10} 128 ${x+12} 112" fill="none" stroke="#7A5636" stroke-width="4" stroke-linecap="round"/>
+<path d="M${x-10} 300 Q${x-6} 318 ${x-10} 336 M${x+9} 292 Q${x+12} 310 ${x+8} 330" fill="none" stroke="#5E4128" stroke-width="2" stroke-linecap="round"/>
+${face}`;
+  const SPOOKY_FACE = (x) => `<g class="spook"><ellipse cx="${x-9}" cy="242" rx="5" ry="8"/><ellipse cx="${x+9}" cy="242" rx="5" ry="8"/><ellipse cx="${x}" cy="272" rx="7" ry="13"/></g>`;
+  const FUNNY_FACE = (x) => `<g class="spook2"><circle cx="${x-9}" cy="240" r="6"/><circle cx="${x+9}" cy="243" r="3.5"/><path d="M${x-8} 232 L${x-15} 229 M${x+5} 236 L${x+13} 233" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><ellipse cx="${x+1}" cy="252" rx="2.5" ry="2"/><path d="M${x-14} 262 Q${x} 282 ${x+14} 259 Q${x} 270 ${x-14} 262 Z"/><path d="M${x+2} 270 Q${x+6} 280 ${x+10} 266 Z"/></g>`;
+  const TREES_AU = bareTree(140, SPOOKY_FACE(140)) + bareTree(565, FUNNY_FACE(565));
+
   // compagni che girano intorno al drago durante celebrate()
   const pal = (inner, ang) => `<g transform="rotate(${ang} 340 200)"><g class="orb"><g transform="rotate(${-ang} 340 50)"><g class="ctr">${inner}</g></g></g></g>`;
   const PALS_SP = [0,120,240].map(a => pal(`<g transform="translate(-62 6)">${BIRD}</g>`, a)).join('');
@@ -180,6 +195,7 @@ ${gift(196,318,28,26,'#E24B4A','#F2C230')}${gift(228,328,22,16,'#378ADD','#fff')
   const SVG = `
 <svg viewBox="75 5 555 355" role="img" aria-label="Draghetto mascotte">
 <defs><clipPath id="tana"><rect x="500" y="240" width="100" height="104"/></clipPath></defs>
+<g class="se au">${TREES_AU}</g>
 <ellipse cx="340" cy="345" rx="95" ry="10" fill="#1F6B4E" opacity=".18"/>
 <g class="se sp">${FLOWERS}</g>
 <g class="se au">${MUSHROOMS}</g>
