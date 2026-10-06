@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quest Week</title>
+<meta name="apple-mobile-web-app-title" content="Quest Week">
+<meta name="theme-color" content="#1f6feb">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script src="draghetto.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1d2330;
+    --muted: #6b7385;
+    --line: #e3e6ec;
+    --track: #e8ebf0;
+    --accent: #1f6feb;
+    --danger: #d64545;
+    --shadow: 0 1px 2px rgba(20,30,50,.06), 0 4px 14px rgba(20,30,50,.05);
+  }
+  /* Tema scuro: automatico (sistema) oppure forzato da Impostazioni con data-theme */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #949cad;
+      --line: #2a313d; --track: #2a303b; --accent: #4c8dff; --danger: #ef6b6b;
+      --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #949cad;
+    --line: #2a313d; --track: #2a303b; --accent: #4c8dff; --danger: #ef6b6b;
+    --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  * { box-sizing: border-box; }
+  /* --page-bg / --on-page vengono impostati da JS quando l'utente sceglie uno sfondo personalizzato */
+  html, body { margin: 0; background: var(--page-bg, var(--bg)); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; transition: background-color .3s; }
+  body { padding: 0 16px calc(84px + env(safe-area-inset-bottom)); }
+  main { max-width: 720px; margin: 0 auto; }
+  header { max-width: 720px; margin: 0 auto; padding: 20px 0 8px; display: flex;
+    align-items: center; justify-content: space-between; gap: 12px; color: var(--on-page, var(--text)); }
+  header .sub { color: var(--on-page-muted, var(--muted)); }
+  h1 { font-size: 1.35rem; margin: 0; }
+  header .logo { width: 44px; height: 44px; flex: none; }
+  .sub { color: var(--muted); font-size: .9rem; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--card);
+    color: var(--text); border-radius: 10px; padding: 8px 12px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 6px 8px; }
+  button.danger { color: var(--danger); }
+  input[type=text], input[type=number] { font: inherit; color: var(--text); background: var(--field, var(--bg));
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  .card, nav.tabs { color: var(--text); }
+  .card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); transition: background-color .3s;
+    padding: 16px; margin: 12px 0; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .row.between { justify-content: space-between; }
+  .grow { flex: 1; min-width: 0; }
+
+  /* Barre */
+  .bar { position: relative; height: 22px; background: var(--track); border-radius: 999px; overflow: hidden; }
+  .bar.big { height: 34px; }
+  .bar > .fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 999px;
+    background: var(--c, var(--accent)); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+  .bar > .label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; font-weight: 700; color: var(--text); mix-blend-mode: normal; }
+  .bar.big > .label { font-size: 1rem; }
+  .bar.full > .fill { box-shadow: 0 0 0 2px var(--c) inset; }
+  .pct { font-variant-numeric: tabular-nums; color: var(--muted); font-size: .9rem; white-space: nowrap; }
+
+  .cat-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
+  .cat-name { font-weight: 700; font-size: 1.05rem; }
+  ul.goals { list-style: none; margin: 12px 0 0; padding: 0; }
+  ul.goals li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  ul.goals label { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; }
+  ul.goals input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--c); flex: none; }
+  ul.goals li.done .t { color: var(--muted); text-decoration: line-through; }
+  .t { overflow-wrap: anywhere; }
+  .add { margin-top: 10px; }
+  .edit-only { display: none !important; }
+  body.editing .edit-only { display: flex !important; }
+  body.editing button.edit-only { display: inline-block !important; }
+  .empty { color: var(--muted); text-align: center; padding: 24px 8px; }
+
+  /* Lungo termine */
+  .lt-vals { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .lt-vals input { width: 90px; text-align: right; }
+  .lt-vals .step { padding: 6px 12px; }
+
+  /* Tab bar */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card);
+    border-top: 1px solid var(--line); display: flex; justify-content: center;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
+  nav.tabs .inner { display: flex; gap: 4px; max-width: 720px; width: 100%; }
+  nav.tabs button { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted); font-size: .7rem;
+    padding: 4px 0; white-space: nowrap; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  nav.tabs svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+  nav.tabs button.on { color: var(--accent); font-weight: 700; }
+  section[hidden] { display: none; }
+
+  .hist-week { margin-bottom: 14px; }
+  .mini { display: grid; grid-template-columns: minmax(80px, 30%) 1fr 44px; gap: 8px; align-items: center; margin-top: 6px; font-size: .9rem; }
+  .mini .bar { height: 12px; }
+  .colors { display: flex; gap: 6px; flex-wrap: wrap; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; padding: 0; background: var(--c); }
+  .swatch.on { border-color: var(--text); }
+  .bg-swatches { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+  .bg-swatches .swatch { width: 38px; height: 38px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .bg-swatches .swatch.on { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); border-color: transparent; }
+  .seg { display: flex; gap: 4px; background: var(--field, var(--bg)); padding: 4px; border-radius: 12px; margin-top: 10px; }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); padding: 8px 6px; }
+  .seg button.on { background: var(--card); color: var(--text); font-weight: 700; box-shadow: var(--shadow); }
+  .card-color-row { margin-top: 10px; gap: 8px; align-items: center; }
+
+  /* Appunti: elenco */
+  .note-item { display: block; width: 100%; text-align: left; padding: 14px 16px; margin: 10px 0;
+    border: 0; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); }
+  .note-item .nt { font-weight: 700; font-size: 1.02rem; }
+  .note-item .np { color: var(--muted); font-size: .9rem; margin-top: 4px; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .note-item .nd { color: var(--muted); font-size: .75rem; margin-top: 6px; }
+
+  /* Appunti: editor */
+  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 2px;
+    overflow-x: auto; scrollbar-width: none; padding: 6px; border-radius: 14px;
+    background: var(--card); box-shadow: var(--shadow); color: var(--text); }
+  .toolbar::-webkit-scrollbar { display: none; }
+  .toolbar button { flex: none; border: 0; background: transparent; min-width: 36px; height: 36px;
+    padding: 0 8px; border-radius: 8px; font-size: 1rem; display: inline-flex; align-items: center; justify-content: center; }
+  .toolbar button:hover { background: var(--field, var(--bg)); }
+  .toolbar button.on { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+  .toolbar svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .toolbar select { flex: none; padding: 6px; }
+  .toolbar .sep { flex: none; width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+  .a-color { font-weight: 700; border-bottom: 3px solid #d1495b; line-height: 1.1; }
+  .colors-pop { margin-top: 6px; padding: 12px; border-radius: 14px; background: var(--card);
+    box-shadow: var(--shadow); color: var(--text); }
+  .colors-pop .swatch { width: 28px; height: 28px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .colors-pop .swatch.none { background: var(--card); position: relative; overflow: hidden; }
+  .colors-pop .swatch.none::after { content: ''; position: absolute; left: -2px; right: -2px; top: 50%;
+    height: 2px; background: var(--danger); transform: rotate(-45deg); }
+  .paper { padding: 28px 24px 40px; min-height: 60vh; }
+  @media (max-width: 480px) { .paper { padding: 20px 16px 32px; } }
+  .note-title { width: 100%; border: 0 !important; background: transparent !important; padding: 0 !important;
+    font-size: 1.6rem !important; font-weight: 700 !important; margin-bottom: 12px; outline: none; }
+  .doc { outline: none; line-height: 1.6; font-size: 1rem; min-height: 45vh; overflow-wrap: anywhere; }
+  .doc:empty::before { content: attr(data-placeholder); color: var(--muted); }
+  .doc h1 { font-size: 1.6rem; margin: .8em 0 .3em; }
+  .doc h2 { font-size: 1.3rem; margin: .8em 0 .3em; }
+  .doc h3 { font-size: 1.1rem; margin: .8em 0 .3em; color: var(--muted); }
+  .doc p, .doc div { margin: 0 0 .4em; }
+  .doc ul, .doc ol { margin: .3em 0 .6em; padding-left: 1.6em; }
+  .doc blockquote { margin: .6em 0; padding: 4px 14px; border-left: 4px solid var(--accent); color: var(--muted); }
+  .doc a { color: var(--accent); }
+  .doc [style*="background-color"] { color: #1d2330; border-radius: 3px; padding: 0 1px; }
+  .doc ul.checklist { list-style: none; padding-left: 2px; }
+  .doc ul.checklist li { position: relative; padding-left: 30px; margin: 4px 0; }
+  .doc ul.checklist li::before { content: ''; position: absolute; left: 0; top: .2em; width: 18px; height: 18px;
+    border: 2px solid var(--muted); border-radius: 5px; box-sizing: border-box; cursor: pointer; }
+  .doc ul.checklist li.checked { color: var(--muted); text-decoration: line-through; }
+  .doc ul.checklist li.checked::before { background: var(--accent); border-color: var(--accent); }
+  .doc ul.checklist li.checked::after { content: ''; position: absolute; left: 6px; top: calc(.2em + 3px);
+    width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+
+  /* Draghetto mascotte */
+  .overall { display: flex; align-items: center; gap: 12px; }
+  .overall drago-mascotte { width: 220px; flex: none; }
+  /* Sul telefono la scena stagionale va sopra la barra, a tutta larghezza */
+  @media (max-width: 560px) {
+    .overall { flex-direction: column; align-items: stretch; gap: 4px; }
+    .overall drago-mascotte { width: 100%; max-width: 300px; align-self: center; }
+  }
+
+  /* Scadenze degli obiettivi */
+  .due { flex: none; font-size: .75rem; padding: 2px 8px; border-radius: 999px;
+    background: var(--field, var(--bg)); color: var(--muted); white-space: nowrap; }
+  .due.missed { background: var(--danger); color: #fff; font-weight: 700; }
+  ul.goals li.done .due { opacity: .5; }
+  select { font: inherit; color: var(--text); background: var(--field, var(--bg));
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 6px; }
+  .card-color-row input[type=color] { width: 44px; height: 34px; }
+  input[type=color] { width: 54px; height: 40px; padding: 2px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--card); cursor: pointer; }
+  .toast { position: fixed; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 999px; font-size: .9rem;
+    opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  /* Finestra di dialogo interna (sostituisce confirm/prompt del browser) */
+  dialog { border: 0; border-radius: 16px; padding: 20px; width: min(420px, calc(100vw - 32px));
+    background: var(--card); color: var(--text); box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(10,15,25,.45); }
+  dialog h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  dialog p { margin: 0 0 12px; color: var(--muted); }
+  dialog .fields { display: grid; gap: 10px; margin-bottom: 16px; }
+  dialog label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+  dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
+  button.danger-fill { background: var(--danger); border-color: var(--danger); color: #fff; }
+</style>
+<!-- Colore generale dei riquadri, scritto da JS (vedi applyAppearance) -->
+<style id="cardTheme"></style>
+</head>
+<body>
+<header>
+  <div class="row" style="gap:12px; min-width:0">
+    <img class="logo" src="icons/icon-192.png" alt="" width="44" height="44">
+    <div style="min-width:0">
+      <h1 id="title">Questa settimana</h1>
+      <div class="sub" id="weekLabel"></div>
+    </div>
+  </div>
+  <button id="editBtn">Modifica</button>
+</header>
+
+<main>
+  <!-- SETTIMANA -->
+  <section id="tab-week">
+    <div class="card overall">
+      <drago-mascotte id="drago" mood="happy" season="auto"></drago-mascotte>
+      <div class="grow">
+        <div class="row between" style="margin-bottom:8px">
+          <strong>Avanzamento settimanale</strong>
+          <span class="pct" id="overallCount"></span>
+        </div>
+        <div class="bar big" id="overallBar" style="--c: var(--accent)"><div class="fill"></div><div class="label"></div></div>
+        <div class="sub" id="dragoMsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div id="categories"></div>
+    <div class="card edit-only" style="flex-direction:column; gap:10px">
+      <strong>Nuova categoria</strong>
+      <form id="addCatForm" class="row">
+        <input type="text" id="newCatName" class="grow" placeholder="es. Lettura" required>
+        <button class="primary">Aggiungi</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- LUNGO TERMINE -->
+  <section id="tab-long" hidden>
+    <div id="longList"></div>
+    <div class="card">
+      <strong>Nuovo obiettivo a lungo termine</strong>
+      <form id="addLongForm" style="display:grid; gap:8px; margin-top:10px">
+        <input type="text" id="ltTitle" placeholder="es. Corso Arduino" required>
+        <div class="row">
+          <input type="number" id="ltCurrent" class="grow" placeholder="Attuale" min="0" step="any" value="0">
+          <span class="sub">su</span>
+          <input type="number" id="ltTotal" class="grow" placeholder="Totale" min="1" step="any" required>
+        </div>
+        <input type="text" id="ltUnit" placeholder="Unità (video, minuti, pagine...)">
+        <button class="primary">Aggiungi</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- STORICO -->
+  <section id="tab-history" hidden>
+    <div id="historyList"></div>
+  </section>
+
+  <!-- APPUNTI -->
+  <section id="tab-notes" hidden>
+    <div id="notesListView">
+      <div class="row" style="margin:12px 0">
+        <input type="text" id="notesSearch" class="grow" placeholder="Cerca negli appunti…">
+        <button class="primary" id="newNoteBtn">+ Nuovo</button>
+      </div>
+      <div id="notesList"></div>
+    </div>
+
+    <div id="noteEditor" hidden>
+      <div class="row between" style="margin:8px 0">
+        <button class="ghost" id="noteBack">‹ Tutti gli appunti</button>
+        <button class="ghost danger" id="noteDelete">Elimina</button>
+      </div>
+      <div class="toolbar" id="noteToolbar">
+        <select id="blockFmt" title="Stile paragrafo" aria-label="Stile paragrafo">
+          <option value="p">Testo normale</option>
+          <option value="h1">Titolo</option>
+          <option value="h2">Sottotitolo</option>
+          <option value="h3">Intestazione</option>
+        </select>
+        <span class="sep"></span>
+        <button data-cmd="bold" title="Grassetto (Ctrl+B)"><b>B</b></button>
+        <button data-cmd="italic" title="Corsivo (Ctrl+I)"><i style="font-family:Georgia,serif">I</i></button>
+        <button data-cmd="underline" title="Sottolineato (Ctrl+U)"><u>U</u></button>
+        <button data-cmd="strikeThrough" title="Barrato"><s>S</s></button>
+        <button data-cmd="colors" title="Colore del testo ed evidenziatore"><span class="a-color">A</span></button>
+        <span class="sep"></span>
+        <button data-cmd="insertUnorderedList" title="Elenco puntato">
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="7" r="1.3"/><circle cx="5" cy="12" r="1.3"/><circle cx="5" cy="17" r="1.3"/><path d="M10 7h10M10 12h10M10 17h10"/></svg></button>
+        <button data-cmd="insertOrderedList" title="Elenco numerato">
+          <svg viewBox="0 0 24 24"><path d="M10 7h10M10 12h10M10 17h10"/><text x="2" y="9" font-size="7" stroke="none" fill="currentColor">1</text><text x="2" y="14.5" font-size="7" stroke="none" fill="currentColor">2</text><text x="2" y="20" font-size="7" stroke="none" fill="currentColor">3</text></svg></button>
+        <button data-cmd="checklist" title="Lista di controllo">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1.5"/><path d="M4.5 7l1.2 1.2L8 5.8"/><rect x="3" y="14" width="6" height="6" rx="1.5"/><path d="M12 7h9M12 17h9"/></svg></button>
+        <button data-cmd="blockquote" title="Citazione">
+          <svg viewBox="0 0 24 24"><path d="M5 5v14M9 8h11M9 12h11M9 16h7"/></svg></button>
+        <span class="sep"></span>
+        <button data-cmd="removeFormat" title="Rimuovi formattazione">
+          <svg viewBox="0 0 24 24"><path d="M6 5h12M12 5l-3 14M4 20l16-16"/></svg></button>
+        <button data-cmd="undo" title="Annulla (Ctrl+Z)">
+          <svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
+        <button data-cmd="redo" title="Ripeti (Ctrl+Y)">
+          <svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 000 12h3"/></svg></button>
+      </div>
+      <div class="colors-pop" id="colorsPop" hidden>
+        <div class="row"><span class="sub" style="width:72px">Testo</span><div class="colors" id="foreColors"></div></div>
+        <div class="row" style="margin-top:8px"><span class="sub" style="width:72px">Evidenzia</span><div class="colors" id="hiliteColors"></div></div>
+      </div>
+      <div class="card paper">
+        <input type="text" id="noteTitle" class="note-title" placeholder="Titolo" aria-label="Titolo dell'appunto">
+        <div id="noteBody" class="doc" contenteditable="true" spellcheck="true" data-placeholder="Inizia a scrivere…"></div>
+      </div>
+      <div class="sub" id="noteStatus" style="text-align:right; margin-bottom:12px"></div>
+    </div>
+  </section>
+
+  <!-- IMPOSTAZIONI -->
+  <section id="tab-settings" hidden>
+    <div class="card">
+      <strong>Tema</strong>
+      <div class="seg" id="themeSeg">
+        <button data-theme-opt="auto">Automatico</button>
+        <button data-theme-opt="light">Chiaro</button>
+        <button data-theme-opt="dark">Scuro</button>
+      </div>
+    </div>
+    <div class="card">
+      <strong>Stagione del draghetto</strong>
+      <p class="sub" style="margin:6px 0 10px">In automatico il draghetto cambia scena con le stagioni: autunno, inverno, primavera, estate.</p>
+      <select id="seasonSel" aria-label="Stagione del draghetto" style="width:100%">
+        <option value="auto">Automatica (in base alla data)</option>
+        <option value="autumn">Autunno</option>
+        <option value="winter">Inverno</option>
+        <option value="spring">Primavera</option>
+        <option value="summer">Estate</option>
+        <option value="">Nessuna</option>
+      </select>
+    </div>
+    <div class="card">
+      <strong>Colore dei riquadri</strong>
+      <p class="sub" style="margin:6px 0 0">Vale per tutti i riquadri. Ogni attività può avere un colore suo: tocca “Modifica” nella sua scheda.</p>
+      <div class="bg-swatches" id="cardSwatches"></div>
+      <div class="row">
+        <input type="color" id="cardPicker" aria-label="Colore riquadri personalizzato">
+        <span class="sub grow">Colore personalizzato</span>
+        <button id="cardReset">Predefinito</button>
+      </div>
+    </div>
+    <div class="card">
+      <strong>Colore di sfondo</strong>
+      <p class="sub" style="margin:6px 0 0">Scegli un colore pronto oppure uno qualsiasi con il selettore.</p>
+      <div class="bg-swatches" id="bgSwatches"></div>
+      <div class="row">
+        <input type="color" id="bgPicker" aria-label="Colore personalizzato">
+        <span class="sub grow">Colore personalizzato</span>
+        <button id="bgReset">Predefinito</button>
+      </div>
+    </div>
+    <div class="card">
+      <strong>Backup</strong>
+      <p class="sub" style="margin:6px 0 10px">I dati sono salvati solo su questo dispositivo. Esporta un file di backup o importalo su un altro dispositivo.</p>
+      <div class="row">
+        <button id="exportBtn">Esporta</button>
+        <button id="importBtn">Importa</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav class="tabs"><div class="inner">
+  <button data-tab="week" class="on">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Settimana</button>
+  <button data-tab="long">
+    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Lungo termine</button>
+  <button data-tab="notes">
+    <svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6M9 13h8M9 17h6"/></svg>Appunti</button>
+  <button data-tab="history">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Storico</button>
+  <button data-tab="settings">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Impostazioni</button>
+</div></nav>
+<div class="toast" id="toast"></div>
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <h2 id="dlgTitle"></h2>
+    <p id="dlgText"></p>
+    <div class="fields" id="dlgFields"></div>
+    <div class="actions">
+      <button type="button" id="dlgCancel">Annulla</button>
+      <button type="submit" id="dlgOk" class="primary">OK</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  const STORE_KEY = 'obiettivi-settimanali-v1';
+  const PALETTE = ['#1f6feb', '#2da44e', '#e3b341', '#d1495b', '#8250df', '#f0883e', '#1b9aaa', '#bf3989'];
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const $ = (s, el = document) => el.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---- Settimana ISO (lunedì-domenica) ----
+  function isoWeek(d = new Date()) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    const week = Math.ceil(((t - yearStart) / 864e5 + 1) / 7);
+    return { key: `${t.getUTCFullYear()}-W${String(week).padStart(2, '0')}`, year: t.getUTCFullYear(), week };
+  }
+  function weekRange(d = new Date()) {
+    const mon = new Date(d); mon.setHours(0, 0, 0, 0);
+    mon.setDate(mon.getDate() - ((mon.getDay() || 7) - 1));
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    const f = x => x.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+    return `${f(mon)} – ${f(sun)}`;
+  }
+
+  // ---- Dati ----
+  function defaultState() {
+    const cats = [
+      { id: uid(), name: 'Lavoro', color: PALETTE[0] },
+      { id: uid(), name: 'Allenamento (corsa)', color: PALETTE[1] },
+      { id: uid(), name: 'Python', color: PALETTE[2] },
+    ];
+    return {
+      version: 1,
+      updatedAt: Date.now(),
+      categories: cats,
+      goals: [],          // { id, categoryId, title } — si ripetono ogni settimana
+      weeks: {},          // { [weekKey]: { done: { goalId: categoryId }, snapshot: [{id,name,color,total}] } }
+      longTerm: [],       // { id, title, unit, current, total, color }
+      // bg: sfondo pagina, card: colore generale dei riquadri, theme: 'auto' | 'light' | 'dark'
+      // season: stagione del draghetto ('auto' = dalla data, '' = nessuna)
+      settings: { bg: null, card: null, theme: 'auto', season: 'auto' },
+      notes: [],          // { id, title, html, createdAt, updatedAt }
+    };
+  }
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { console.warn('Lettura dati fallita', e); }
+    return defaultState();
+  }
+  let state = load();
+  if (!Array.isArray(state.notes)) state.notes = [];
+  // Scrive i dati senza ridisegnare (usato dall'editor degli appunti mentre si scrive)
+  function persist() {
+    state.updatedAt = Date.now();
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; }
+    catch (e) { toast('Impossibile salvare: spazio esaurito'); return false; }
+  }
+  function save() {
+    snapshotCurrentWeek();
+    persist();
+    render();
+  }
+  function currentWeek() {
+    const { key } = isoWeek();
+    if (!state.weeks[key]) state.weeks[key] = { done: {}, snapshot: [] };
+    return state.weeks[key];
+  }
+  // Salva i totali per categoria della settimana corrente, così lo storico resta corretto
+  // anche se in futuro gli obiettivi cambiano.
+  function snapshotCurrentWeek() {
+    const w = currentWeek();
+    w.snapshot = state.categories.map(c => ({
+      id: c.id, name: c.name, color: c.color,
+      total: state.goals.filter(g => g.categoryId === c.id).length,
+    }));
+  }
+  const pct = (a, b) => (b > 0 ? Math.min(100, Math.round((a / b) * 100)) : 0);
+
+  // ---- Scadenze (giorno della settimana: 1 = lunedì … 7 = domenica) ----
+  const DAYS = ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom'];
+  const DAY_NAMES = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+  const dueOptions = () => [['', 'Nessuna scadenza'], ...DAY_NAMES.map((d, i) => [i + 1, 'Entro ' + d])];
+  const todayIdx = () => new Date().getDay() || 7;
+  // Mancata = non completato e il giorno di scadenza è già finito.
+  const isMissed = (g, w) => !!g.due && !w.done[g.id] && todayIdx() > g.due;
+  // Frazione della settimana trascorsa (0 = lunedì 00:00, 1 = domenica 24:00).
+  function weekFraction() {
+    const now = new Date();
+    const mon = new Date(now); mon.setHours(0, 0, 0, 0);
+    mon.setDate(mon.getDate() - (todayIdx() - 1));
+    return (now - mon) / (7 * 864e5);
+  }
+
+  // ---- Draghetto: umore in base all'avanzamento ----
+  // arrabbiato se una scadenza è mancata, felice dal 70%, triste sotto il 40% dopo metà settimana.
+  function updateMascot() {
+    const drago = $('#drago');
+    if (!drago) return;
+    const w = currentWeek();
+    const total = state.goals.length;
+    const p = pct(state.goals.filter(g => w.done[g.id]).length, total);
+    const missed = state.goals.filter(g => isMissed(g, w)).length;
+    let mood = 'happy', msg;
+    if (!total) msg = 'Aggiungi i tuoi obiettivi della settimana!';
+    else if (missed) { mood = 'angry'; msg = `Scadenza mancata: ${missed} ${missed > 1 ? 'obiettivi' : 'obiettivo'}!`; }
+    else if (p >= 70) msg = p === 100 ? 'Settimana completata! 🎉' : 'Ottimo lavoro, continua così!';
+    else if (p < 40 && weekFraction() > 0.5) { mood = 'sad'; msg = 'Siamo oltre metà settimana… recuperiamo!'; }
+    else msg = 'Un obiettivo alla volta.';
+    if (drago.mood !== mood) drago.mood = mood;
+    // 'auto' viene ricalcolato dalla data a ogni aggiornamento (anche al cambio di giorno)
+    drago.season = state.settings?.season ?? 'auto';
+    $('#dragoMsg').textContent = msg;
+  }
+  const celebrate = () => document.querySelectorAll('drago-mascotte').forEach(d => d.celebrate?.());
+
+  // ---- Finestra di dialogo interna ----
+  // confirm()/prompt() del browser non funzionano in alcuni contesti (webview, alcune PWA):
+  // restituiscono subito "Annulla". Usiamo un <dialog> nostro che restituisce una Promise.
+  function openDialog({ title, text = '', fields = [], okText = 'OK', danger = false }) {
+    const dlg = $('#dlg');
+    $('#dlgTitle').textContent = title;
+    $('#dlgText').textContent = text;
+    $('#dlgText').hidden = !text;
+    $('#dlgFields').innerHTML = fields.map((f, i) => f.type === 'select' ? `
+      <label>${esc(f.label)}
+        <select name="f${i}">${f.options.map(([v, t]) => `<option value="${v}" ${String(v) === String(f.value ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      </label>` : `
+      <label>${esc(f.label)}
+        <input type="${f.type || 'text'}" name="f${i}" value="${esc(f.value ?? '')}"
+          ${f.type === 'number' ? 'step="any" min="0"' : ''} ${f.required ? 'required' : ''}>
+      </label>`).join('');
+    const ok = $('#dlgOk');
+    ok.textContent = okText;
+    ok.className = danger ? 'danger-fill' : 'primary';
+    return new Promise(resolve => {
+      const finish = val => {
+        $('#dlgForm').onsubmit = null; $('#dlgCancel').onclick = null; dlg.oncancel = null;
+        if (dlg.open) dlg.close();
+        resolve(val);
+      };
+      $('#dlgForm').onsubmit = e => {
+        e.preventDefault();
+        finish(fields.map((f, i) => $(`#dlgFields [name=f${i}]`).value));
+      };
+      $('#dlgCancel').onclick = () => finish(null);
+      dlg.oncancel = e => { e.preventDefault(); finish(null); };
+      dlg.showModal();
+      ($('#dlgFields input') || ok).focus();
+    });
+  }
+  const askConfirm = (title, text) => openDialog({ title, text, okText: 'Elimina', danger: true }).then(v => v !== null);
+  const askText = (title, value) => openDialog({ title, fields: [{ label: 'Nome', value, required: true }], okText: 'Salva' })
+    .then(v => (v && v[0].trim()) || null);
+
+  // ---- Render ----
+  function setBar(el, done, total, text) {
+    const p = pct(done, total);
+    el.querySelector('.fill').style.width = p + '%';
+    el.querySelector('.label').textContent = text ?? p + '%';
+    el.classList.toggle('full', total > 0 && done >= total);
+  }
+
+  function renderWeek() {
+    const w = currentWeek();
+    const { week } = isoWeek();
+    $('#weekLabel').textContent = `Settimana ${week} · ${weekRange()}`;
+
+    const total = state.goals.length;
+    const done = state.goals.filter(g => w.done[g.id]).length;
+    $('#overallCount').textContent = `${done} / ${total}`;
+    setBar($('#overallBar'), done, total);
+    updateMascot();
+
+    const wrap = $('#categories');
+    if (!state.categories.length) {
+      wrap.innerHTML = '<div class="card empty">Nessuna categoria. Tocca “Modifica” per aggiungerne una.</div>';
+      return;
+    }
+    wrap.innerHTML = state.categories.map(c => {
+      const goals = state.goals.filter(g => g.categoryId === c.id);
+      const d = goals.filter(g => w.done[g.id]).length;
+      return `
+      <div class="card" style="--c:${c.color};${cardVars(c.cardBg)}" data-cat="${c.id}">
+        <div class="cat-head">
+          <span class="dot"></span>
+          <span class="cat-name grow">${esc(c.name)}</span>
+          <span class="pct">${d} / ${goals.length}</span>
+          <button class="ghost edit-only" data-act="rename-cat" title="Rinomina">✎</button>
+          <button class="ghost danger edit-only" data-act="del-cat" title="Elimina">✕</button>
+        </div>
+        <div class="bar"><div class="fill"></div><div class="label"></div></div>
+        ${colorControls(c)}
+        <ul class="goals">
+          ${goals.map(g => `
+            <li class="${w.done[g.id] ? 'done' : ''}" data-goal="${g.id}">
+              <label><input type="checkbox" ${w.done[g.id] ? 'checked' : ''} data-act="toggle"><span class="t">${esc(g.title)}</span></label>
+              ${g.due ? `<span class="due ${isMissed(g, w) ? 'missed' : ''}" title="${isMissed(g, w) ? 'Scadenza mancata' : 'Scadenza'}">entro ${DAYS[g.due - 1]}</span>` : ''}
+              <button class="ghost edit-only" data-act="rename-goal" title="Modifica">✎</button>
+              <button class="ghost danger edit-only" data-act="del-goal" title="Elimina">✕</button>
+            </li>`).join('')}
+          ${goals.length ? '' : '<li class="sub" style="border:0">Nessun obiettivo ancora.</li>'}
+        </ul>
+        <form class="row add edit-only" data-act="add-goal">
+          <input type="text" class="grow" placeholder="Nuovo obiettivo…" required>
+          <select aria-label="Scadenza">${dueOptions().map(([v, t]) => `<option value="${v}">${v ? t : 'Entro…'}</option>`).join('')}</select>
+          <button class="primary">+</button>
+        </form>
+      </div>`;
+    }).join('');
+    // Imposta le barre dopo l'inserimento così la transizione parte da 0 solo al primo render
+    state.categories.forEach(c => {
+      const goals = state.goals.filter(g => g.categoryId === c.id);
+      const d = goals.filter(g => w.done[g.id]).length;
+      const bar = wrap.querySelector(`[data-cat="${c.id}"] .bar`);
+      const prev = lastPct[c.id] ?? 0;
+      bar.querySelector('.fill').style.width = prev + '%';
+      requestAnimationFrame(() => setBar(bar, d, goals.length));
+      lastPct[c.id] = pct(d, goals.length);
+    });
+  }
+  const lastPct = {};
+
+  // Controlli colore di una singola attività (visibili solo in modalità Modifica):
+  // colore della barra + colore di sfondo del riquadro.
+  function colorControls(item) {
+    return `
+        <div class="colors edit-only" style="margin-top:10px">
+          ${PALETTE.map(p => `<button class="swatch ${p === item.color ? 'on' : ''}" style="--c:${p}" data-act="color" data-color="${p}" aria-label="Colore barra"></button>`).join('')}
+        </div>
+        <div class="row card-color-row edit-only">
+          <span class="sub grow">Sfondo riquadro</span>
+          <input type="color" data-act="card-bg" value="${item.cardBg || '#ffffff'}" aria-label="Sfondo riquadro">
+          <button class="ghost" data-act="card-bg-reset">Predefinito</button>
+        </div>`;
+  }
+
+  function renderLong() {
+    const wrap = $('#longList');
+    if (!state.longTerm.length) {
+      wrap.innerHTML = '<div class="card empty">Nessun obiettivo a lungo termine. Aggiungine uno qui sotto.</div>';
+      return;
+    }
+    wrap.innerHTML = state.longTerm.map(l => {
+      const done = l.current >= l.total;
+      return `
+      <div class="card" style="--c:${l.color};${cardVars(l.cardBg)}" data-lt="${l.id}">
+        <div class="cat-head" style="margin-bottom:8px">
+          <span class="dot"></span>
+          <span class="cat-name grow">${esc(l.title)}${done ? ' ✓' : ''}</span>
+          <span class="pct">${fmt(l.current)} su ${fmt(l.total)} ${esc(l.unit || '')}</span>
+          <button class="ghost edit-only" data-act="edit-lt" title="Modifica">✎</button>
+          <button class="ghost danger edit-only" data-act="del-lt" title="Elimina">✕</button>
+        </div>
+        <div class="bar"><div class="fill" style="width:${pct(l.current, l.total)}%"></div><div class="label">${pct(l.current, l.total)}%</div></div>
+        <div class="lt-vals">
+          <button class="step" data-act="lt-step" data-d="-1">−1</button>
+          <input type="number" min="0" step="any" value="${l.current}" data-act="lt-set" aria-label="Valore attuale">
+          <button class="step" data-act="lt-step" data-d="1">+1</button>
+          <span class="sub">/ ${fmt(l.total)} ${esc(l.unit || '')}</span>
+        </div>
+        ${colorControls(l)}
+      </div>`;
+    }).join('');
+    wrap.querySelectorAll('.bar').forEach((b, i) => b.classList.toggle('full', state.longTerm[i].current >= state.longTerm[i].total));
+  }
+  const fmt = n => Number(n).toLocaleString('it-IT', { maximumFractionDigits: 2 });
+
+  function renderHistory() {
+    const { key: nowKey } = isoWeek();
+    const keys = Object.keys(state.weeks).filter(k => k !== nowKey).sort().reverse();
+    const wrap = $('#historyList');
+    if (!keys.length) {
+      wrap.innerHTML = '<div class="card empty">Lo storico apparirà qui dalla prossima settimana.</div>';
+      return;
+    }
+    wrap.innerHTML = keys.map(k => {
+      const w = state.weeks[k];
+      const snap = w.snapshot || [];
+      const doneBy = {};
+      Object.values(w.done).forEach(cid => (doneBy[cid] = (doneBy[cid] || 0) + 1));
+      const tot = snap.reduce((s, c) => s + c.total, 0);
+      const dn = snap.reduce((s, c) => s + Math.min(c.total, doneBy[c.id] || 0), 0);
+      const [y, wk] = k.split('-W');
+      return `
+      <div class="card hist-week">
+        <div class="row between"><strong>Settimana ${+wk} · ${y}</strong><span class="pct">${dn} / ${tot} · ${pct(dn, tot)}%</span></div>
+        <div class="bar" style="margin-top:8px"><div class="fill" style="width:${pct(dn, tot)}%"></div><div class="label"></div></div>
+        ${snap.filter(c => c.total).map(c => `
+          <div class="mini" style="--c:${c.color}">
+            <span class="t">${esc(c.name)}</span>
+            <div class="bar"><div class="fill" style="width:${pct(doneBy[c.id] || 0, c.total)}%"></div></div>
+            <span class="pct">${pct(doneBy[c.id] || 0, c.total)}%</span>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  function render() {
+    applyAppearance();
+    applyBackground();
+    renderWeek();
+    renderLong();
+    renderHistory();
+  }
+
+  // ---- Eventi ----
+  $('#categories').addEventListener('change', e => {
+    if (e.target.dataset.act !== 'toggle') return;
+    const gid = e.target.closest('[data-goal]').dataset.goal;
+    const g = state.goals.find(x => x.id === gid);
+    const w = currentWeek();
+    if (e.target.checked) w.done[gid] = g.categoryId; else delete w.done[gid];
+    save();
+    if (e.target.checked) celebrate();
+  });
+  $('#categories').addEventListener('click', async e => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const cid = btn.closest('[data-cat]')?.dataset.cat;
+    const cat = state.categories.find(c => c.id === cid);
+    const gid = btn.closest('[data-goal]')?.dataset.goal;
+    const goal = state.goals.find(g => g.id === gid);
+    switch (btn.dataset.act) {
+      case 'rename-cat': {
+        const n = await askText('Rinomina categoria', cat.name);
+        if (n) { cat.name = n; save(); }
+        break;
+      }
+      case 'del-cat':
+        if (await askConfirm('Eliminare la categoria?', `“${cat.name}” e tutti i suoi obiettivi verranno eliminati.`)) {
+          const ids = new Set(state.goals.filter(g => g.categoryId === cid).map(g => g.id));
+          state.goals = state.goals.filter(g => g.categoryId !== cid);
+          state.categories = state.categories.filter(c => c.id !== cid);
+          const w = currentWeek(); ids.forEach(id => delete w.done[id]);
+          save();
+        }
+        break;
+      case 'color': cat.color = btn.dataset.color; save(); break;
+      case 'card-bg-reset': cat.cardBg = null; save(); break;
+      case 'rename-goal': {
+        const v = await openDialog({
+          title: 'Modifica obiettivo',
+          fields: [
+            { label: 'Nome', value: goal.title, required: true },
+            { label: 'Scadenza nella settimana', type: 'select', value: goal.due || '', options: dueOptions() },
+          ],
+          okText: 'Salva',
+        });
+        if (v && v[0].trim()) { goal.title = v[0].trim(); goal.due = Number(v[1]) || null; save(); }
+        break;
+      }
+      case 'del-goal':
+        if (await askConfirm('Eliminare l’obiettivo?', `“${goal.title}”`)) {
+          state.goals = state.goals.filter(g => g.id !== gid);
+          delete currentWeek().done[gid];
+          save();
+        }
+        break;
+    }
+  });
+  $('#categories').addEventListener('submit', e => {
+    e.preventDefault();
+    const form = e.target;
+    const input = form.querySelector('input');
+    const cid = form.closest('[data-cat]').dataset.cat;
+    if (!input.value.trim()) return;
+    const due = Number(form.querySelector('select').value) || null;
+    state.goals.push({ id: uid(), categoryId: cid, title: input.value.trim(), due });
+    save();
+    // rimetti il focus sul campo della stessa categoria per inserimenti rapidi
+    $(`[data-cat="${cid}"] form input`)?.focus();
+  });
+  $('#addCatForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $('#newCatName').value.trim();
+    if (!name) return;
+    state.categories.push({ id: uid(), name, color: PALETTE[state.categories.length % PALETTE.length] });
+    $('#newCatName').value = '';
+    save();
+  });
+
+  // Lungo termine
+  $('#addLongForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const total = parseFloat($('#ltTotal').value);
+    if (!(total > 0)) return;
+    state.longTerm.push({
+      id: uid(),
+      title: $('#ltTitle').value.trim(),
+      unit: $('#ltUnit').value.trim(),
+      current: Math.max(0, parseFloat($('#ltCurrent').value) || 0),
+      total,
+      color: PALETTE[(state.longTerm.length + 3) % PALETTE.length],
+    });
+    e.target.reset();
+    save();
+  });
+  function setLongValue(lt, v) {
+    const wasDone = lt.current >= lt.total;
+    lt.current = Math.max(0, Math.min(lt.total, Math.round(v * 100) / 100));
+    save();
+    if (!wasDone && lt.current >= lt.total) { toast(`🎉 “${lt.title}” completato!`); celebrate(); }
+  }
+  $('#longList').addEventListener('click', async e => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const lt = state.longTerm.find(l => l.id === btn.closest('[data-lt]').dataset.lt);
+    switch (btn.dataset.act) {
+      case 'lt-step': setLongValue(lt, lt.current + Number(btn.dataset.d)); break;
+      case 'color': lt.color = btn.dataset.color; save(); break;
+      case 'card-bg-reset': lt.cardBg = null; save(); break;
+      case 'edit-lt': {
+        const v = await openDialog({
+          title: 'Modifica obiettivo',
+          fields: [
+            { label: 'Titolo', value: lt.title, required: true },
+            { label: 'Totale', value: lt.total, type: 'number', required: true },
+            { label: 'Unità di misura', value: lt.unit || '' },
+          ],
+          okText: 'Salva',
+        });
+        if (!v) return;
+        const total = parseFloat(v[1]);
+        if (!(total > 0)) { toast('Il totale deve essere maggiore di zero'); return; }
+        Object.assign(lt, { title: v[0].trim() || lt.title, total, unit: v[2].trim() });
+        lt.current = Math.min(lt.current, total);
+        save();
+        break;
+      }
+      case 'del-lt':
+        if (await askConfirm('Eliminare l’obiettivo?', `“${lt.title}”`)) { state.longTerm = state.longTerm.filter(l => l !== lt); save(); }
+        break;
+    }
+  });
+  $('#longList').addEventListener('change', e => {
+    if (e.target.dataset.act !== 'lt-set') return;
+    const lt = state.longTerm.find(l => l.id === e.target.closest('[data-lt]').dataset.lt);
+    setLongValue(lt, parseFloat(e.target.value) || 0);
+  });
+
+  // Tabs & modalità modifica
+  const titles = { week: 'Questa settimana', long: 'Lungo termine', notes: 'Appunti', history: 'Storico', settings: 'Impostazioni' };
+  document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => {
+    flushNote();
+    document.querySelectorAll('nav.tabs button').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('main > section').forEach(s => (s.hidden = s.id !== 'tab-' + b.dataset.tab));
+    $('#title').textContent = titles[b.dataset.tab];
+    $('#editBtn').style.visibility = ['notes', 'history', 'settings'].includes(b.dataset.tab) ? 'hidden' : 'visible';
+    if (b.dataset.tab === 'notes') renderNotesList();
+  }));
+
+  // ---- Appunti (editor in stile documento) ----
+  // Il testo è HTML: lo ripuliamo sempre (incolla, caricamento) tenendo solo la formattazione ammessa.
+  const ALLOWED = {
+    P: [], BR: [], DIV: [], H1: [], H2: [], H3: [], B: [], STRONG: [], I: [], EM: [], U: [], S: [], STRIKE: [],
+    UL: ['class'], OL: [], LI: ['class'], BLOCKQUOTE: [], A: ['href'], SPAN: ['style'], FONT: ['color'],
+  };
+  const DROP = ['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'TEMPLATE', 'META', 'LINK', 'TITLE', 'IMG', 'VIDEO', 'AUDIO', 'SVG', 'MATH', 'FORM', 'INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'];
+  function cleanNode(node) {
+    [...node.childNodes].forEach(n => {
+      if (n.nodeType === 3) return;
+      if (n.nodeType !== 1) { n.remove(); return; }
+      const tag = n.tagName.toUpperCase();
+      if (DROP.includes(tag)) { n.remove(); return; }
+      cleanNode(n);
+      if (!ALLOWED[tag]) { n.replaceWith(...n.childNodes); return; }
+      // Di uno stile teniamo solo colore del testo ed evidenziazione (il browser può metterli su qualsiasi tag)
+      const c = n.style?.color, bg = n.style?.backgroundColor;
+      [...n.attributes].forEach(a => { if (!ALLOWED[tag].includes(a.name)) n.removeAttribute(a.name); });
+      n.removeAttribute('style');
+      if (c) n.style.color = c;
+      if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') n.style.backgroundColor = bg;
+      if (tag === 'SPAN' && !n.getAttribute('style')) { n.replaceWith(...n.childNodes); return; }
+      if (tag === 'A') {
+        const href = n.getAttribute('href') || '';
+        if (/^(https?:|mailto:)/i.test(href)) { n.target = '_blank'; n.rel = 'noopener'; } else n.removeAttribute('href');
+      }
+      if (tag === 'UL' && n.className !== 'checklist') n.removeAttribute('class');
+      if (tag === 'LI' && n.className !== 'checked') n.removeAttribute('class');
+    });
+  }
+  function sanitize(html) {
+    const t = document.createElement('template');
+    t.innerHTML = html || '';
+    cleanNode(t.content);
+    return t.innerHTML;
+  }
+  // Testo semplice di un appunto (per anteprima e ricerca): uno spazio tra paragrafi e punti elenco
+  const htmlToText = html => {
+    const t = document.createElement('template');
+    t.innerHTML = (html || '').replace(/<\/(p|div|h[1-3]|li|blockquote)>|<br\s*\/?>/gi, ' $&');
+    return (t.content.textContent || '').replace(/\s+/g, ' ');
+  };
+
+  document.execCommand('defaultParagraphSeparator', false, 'p'); // Invio crea paragrafi <p>, come in un documento
+  let openNoteId = null, noteTimer = null, savedRange = null;
+  const noteBody = $('#noteBody'), noteTitle = $('#noteTitle');
+  const openNote = () => state.notes.find(n => n.id === openNoteId);
+
+  function renderNotesList() {
+    const q = $('#notesSearch').value.trim().toLowerCase();
+    const notes = [...state.notes]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .filter(n => !q || (n.title + ' ' + htmlToText(n.html)).toLowerCase().includes(q));
+    const fmtDate = t => new Date(t).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    $('#notesList').innerHTML = notes.length ? notes.map(n => {
+      const text = htmlToText(n.html).trim();
+      return `<button class="note-item" data-note="${n.id}">
+        <div class="nt">${esc(n.title || 'Senza titolo')}</div>
+        ${text ? `<div class="np">${esc(text.slice(0, 200))}</div>` : ''}
+        <div class="nd">Modificato ${fmtDate(n.updatedAt)}</div>
+      </button>`;
+    }).join('') : `<div class="card empty">${q ? 'Nessun appunto trovato.' : 'Nessun appunto. Tocca “+ Nuovo” per iniziare a scrivere.'}</div>`;
+  }
+
+  function showEditor(id) {
+    openNoteId = id;
+    const n = openNote();
+    noteTitle.value = n.title;
+    noteBody.innerHTML = sanitize(n.html);
+    $('#notesListView').hidden = true;
+    $('#noteEditor').hidden = false;
+    $('#colorsPop').hidden = true;
+    updateNoteStatus('Salvato');
+    window.scrollTo(0, 0);
+    (n.title ? noteBody : noteTitle).focus();
+  }
+  function closeEditor() {
+    flushNote();
+    const n = openNote();
+    // Un appunto lasciato vuoto non serve: lo eliminiamo senza chiedere.
+    if (n && !n.title.trim() && !htmlToText(n.html).trim()) {
+      state.notes = state.notes.filter(x => x !== n);
+      persist();
+    }
+    openNoteId = null;
+    $('#noteEditor').hidden = true;
+    $('#notesListView').hidden = false;
+    renderNotesList();
+  }
+  function wordCount() {
+    const words = (noteBody.innerText || '').trim().split(/\s+/).filter(Boolean).length;
+    return `${words} ${words === 1 ? 'parola' : 'parole'}`;
+  }
+  function updateNoteStatus(s) { $('#noteStatus').textContent = `${wordCount()} · ${s}`; }
+  function scheduleNoteSave() {
+    updateNoteStatus('Modifiche in corso…');
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(flushNote, 500);
+  }
+  function flushNote() {
+    clearTimeout(noteTimer);
+    noteTimer = null;
+    const n = openNote();
+    if (!n) return;
+    const html = sanitize(noteBody.innerHTML), title = noteTitle.value.trim();
+    if (html === n.html && title === n.title) return;
+    Object.assign(n, { html, title, updatedAt: Date.now() });
+    if (persist()) updateNoteStatus('Salvato');
+  }
+
+  $('#newNoteBtn').addEventListener('click', () => {
+    const now = Date.now();
+    const n = { id: uid(), title: '', html: '', createdAt: now, updatedAt: now };
+    state.notes.push(n);
+    persist();
+    showEditor(n.id);
+  });
+  $('#notesList').addEventListener('click', e => {
+    const b = e.target.closest('[data-note]');
+    if (b) showEditor(b.dataset.note);
+  });
+  $('#notesSearch').addEventListener('input', renderNotesList);
+  $('#noteBack').addEventListener('click', closeEditor);
+  $('#noteDelete').addEventListener('click', async () => {
+    const n = openNote();
+    if (!(await askConfirm('Eliminare l’appunto?', `“${n.title || 'Senza titolo'}” verrà eliminato definitivamente.`))) return;
+    clearTimeout(noteTimer);
+    state.notes = state.notes.filter(x => x !== n);
+    persist();
+    openNoteId = null;
+    closeEditor();
+  });
+  noteTitle.addEventListener('input', scheduleNoteSave);
+  noteTitle.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); noteBody.focus(); } });
+  noteBody.addEventListener('input', () => {
+    // Un nuovo punto creato con Invio in una lista di controllo non deve nascere già spuntato
+    const li = currentBlock()?.closest?.('ul.checklist > li');
+    if (li && !li.textContent.trim()) li.classList.remove('checked');
+    scheduleNoteSave();
+  });
+  // Incolla: teniamo solo la formattazione ammessa (niente script, immagini o stili esterni)
+  noteBody.addEventListener('paste', e => {
+    const html = e.clipboardData.getData('text/html');
+    if (!html) return;
+    e.preventDefault();
+    document.execCommand('insertHTML', false, sanitize(html));
+  });
+  // Spunta / togli spunta cliccando la casella di una lista di controllo
+  noteBody.addEventListener('click', e => {
+    const li = e.target.closest('ul.checklist > li');
+    if (!li || e.clientX - li.getBoundingClientRect().left > 26) return;
+    li.classList.toggle('checked');
+    scheduleNoteSave();
+  });
+
+  // Selezione: la ricordiamo così i comandi della barra (che rubano il focus) agiscono sul testo giusto
+  function currentBlock() {
+    const sel = getSelection();
+    if (!sel.rangeCount) return null;
+    let n = sel.getRangeAt(0).startContainer;
+    if (n.nodeType === 3) n = n.parentNode;
+    return noteBody.contains(n) ? n : null;
+  }
+  function restoreSelection() {
+    noteBody.focus();
+    if (savedRange) { const s = getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+  }
+  document.addEventListener('selectionchange', () => {
+    const sel = getSelection();
+    if (!sel.rangeCount || !noteBody.contains(sel.getRangeAt(0).commonAncestorContainer)) return;
+    savedRange = sel.getRangeAt(0).cloneRange();
+    updateToolbar();
+  });
+  function updateToolbar() {
+    ['bold', 'italic', 'underline', 'strikeThrough', 'insertOrderedList'].forEach(c =>
+      $(`#noteToolbar [data-cmd="${c}"]`).classList.toggle('on', document.queryCommandState(c)));
+    const block = currentBlock();
+    const inCheck = !!block?.closest('ul.checklist');
+    $('#noteToolbar [data-cmd="insertUnorderedList"]').classList.toggle('on', document.queryCommandState('insertUnorderedList') && !inCheck);
+    $('#noteToolbar [data-cmd="checklist"]').classList.toggle('on', inCheck);
+    $('#noteToolbar [data-cmd="blockquote"]').classList.toggle('on', !!block?.closest('blockquote'));
+    const h = block?.closest('h1, h2, h3');
+    $('#blockFmt').value = h ? h.tagName.toLowerCase() : 'p';
+  }
+
+  function runCmd(cmd) {
+    restoreSelection();
+    const block = currentBlock();
+    switch (cmd) {
+      case 'checklist': {
+        const ul = block?.closest('ul');
+        if (ul?.classList.contains('checklist')) { document.execCommand('insertUnorderedList'); break; }
+        if (!ul) document.execCommand('insertUnorderedList');
+        currentBlock()?.closest('ul')?.classList.add('checklist');
+        break;
+      }
+      case 'blockquote':
+        document.execCommand('formatBlock', false, block?.closest('blockquote') ? '<p>' : '<blockquote>');
+        break;
+      case 'removeFormat':
+        document.execCommand('removeFormat');
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand('hiliteColor', false, 'transparent');
+        document.execCommand('styleWithCSS', false, false);
+        break;
+      default:
+        document.execCommand(cmd);
+    }
+    updateToolbar();
+    scheduleNoteSave();
+  }
+  // mousedown + preventDefault: il clic sulla barra non toglie la selezione dal testo
+  $('#noteToolbar').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+  $('#noteToolbar').addEventListener('click', e => {
+    const b = e.target.closest('button[data-cmd]');
+    if (!b) return;
+    if (b.dataset.cmd === 'colors') { $('#colorsPop').hidden = !$('#colorsPop').hidden; return; }
+    runCmd(b.dataset.cmd);
+  });
+  $('#blockFmt').addEventListener('change', e => {
+    restoreSelection();
+    document.execCommand('formatBlock', false, `<${e.target.value}>`);
+    updateToolbar();
+    scheduleNoteSave();
+  });
+
+  // Colori del testo ed evidenziatore
+  const FORE = ['#1d2330', '#d1495b', '#f0883e', '#2da44e', '#1f6feb', '#8250df', '#8a8f96'];
+  const HILITE = ['#fff59d', '#c8f7c5', '#bde0fe', '#ffd6e0', '#ffe0b2'];
+  $('#foreColors').innerHTML = FORE.map(c => `<button class="swatch" style="--c:${c}" data-fore="${c}" aria-label="Colore ${c}"></button>`).join('');
+  $('#hiliteColors').innerHTML = HILITE.map(c => `<button class="swatch" style="--c:${c}" data-hilite="${c}" aria-label="Evidenzia ${c}"></button>`).join('')
+    + '<button class="swatch none" data-hilite="transparent" aria-label="Nessuna evidenziazione" title="Togli evidenziazione"></button>';
+  $('#colorsPop').addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+  $('#colorsPop').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    restoreSelection();
+    document.execCommand('styleWithCSS', false, true);
+    if (b.dataset.fore) document.execCommand('foreColor', false, b.dataset.fore);
+    if (b.dataset.hilite) document.execCommand('hiliteColor', false, b.dataset.hilite);
+    document.execCommand('styleWithCSS', false, false);
+    $('#colorsPop').hidden = true;
+    scheduleNoteSave();
+  });
+  // Salva anche se l'app viene chiusa o messa in background mentre si scrive
+  window.addEventListener('pagehide', flushNote);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushNote(); });
+
+  // Sfondo personalizzato
+  const BG_PRESETS = ['#f4f5f7', '#fdf6e3', '#e8f5e9', '#e3f2fd', '#fce4ec', '#ede7f6', '#ffe0b2',
+                      '#12151b', '#1e2a3a', '#1b3a2f', '#3b1f2b', '#2d2440'];
+  function isDark(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255];
+    return (0.299 * r + 0.587 * g + 0.114 * b) < 140;
+  }
+  function applyBackground() {
+    const bg = state.settings?.bg;
+    const root = document.documentElement.style;
+    if (bg) {
+      root.setProperty('--page-bg', bg);
+      root.setProperty('--on-page', isDark(bg) ? '#f2f4f8' : '#1d2330');
+      root.setProperty('--on-page-muted', isDark(bg) ? 'rgba(242,244,248,.7)' : 'rgba(29,35,48,.65)');
+    } else {
+      ['--page-bg', '--on-page', '--on-page-muted'].forEach(p => root.removeProperty(p));
+    }
+    document.querySelector('meta[name=theme-color]').content = bg || '#1f6feb';
+    $('#bgPicker').value = bg || '#f4f5f7';
+    $('#bgSwatches').innerHTML = BG_PRESETS.map(c =>
+      `<button class="swatch ${c === bg ? 'on' : ''}" style="--c:${c}" data-bg="${c}" aria-label="Sfondo ${c}"></button>`).join('');
+  }
+  function setBackground(color) {
+    state.settings = { ...(state.settings || {}), bg: color };
+    save();
+  }
+  $('#bgSwatches').addEventListener('click', e => {
+    const b = e.target.closest('[data-bg]');
+    if (b) setBackground(b.dataset.bg);
+  });
+  $('#bgPicker').addEventListener('input', e => setBackground(e.target.value));
+  $('#bgReset').addEventListener('click', () => setBackground(null));
+
+  // ---- Colore dei riquadri ----
+  // Dato un colore di sfondo per un riquadro, calcola anche testo, linee e barre
+  // in modo che restino leggibili (testo chiaro su fondo scuro e viceversa).
+  function cardVarMap(hex) {
+    if (!hex) return {};
+    const d = isDark(hex);
+    return {
+      '--card': hex,
+      '--text': d ? '#eef1f6' : '#1d2330',
+      '--muted': d ? 'rgba(238,241,246,.65)' : 'rgba(29,35,48,.6)',
+      '--line': d ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.09)',
+      '--track': d ? 'rgba(255,255,255,.14)' : 'rgba(0,0,0,.08)',
+      '--field': d ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.04)',
+    };
+  }
+  const cardVars = hex => Object.entries(cardVarMap(hex)).map(([k, v]) => `${k}:${v}`).join(';');
+
+  const CARD_PRESETS = ['#ffffff', '#fffaf0', '#f1f8e9', '#e3f2fd', '#fce4ec', '#f3e5f5',
+                        '#1b2029', '#243447', '#1f3a2e', '#3a2430', '#2e2a3d'];
+  function applyAppearance() {
+    const s = state.settings || {};
+    const theme = s.theme || 'auto';
+    if (theme === 'auto') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+    document.querySelectorAll('#themeSeg button').forEach(b => b.classList.toggle('on', b.dataset.themeOpt === theme));
+
+    $('#seasonSel').value = s.season ?? 'auto';
+    $('#cardTheme').textContent =s.card ? `.card, nav.tabs, dialog { ${cardVars(s.card)} }` : '';
+    $('#cardPicker').value = s.card || '#ffffff';
+    $('#cardSwatches').innerHTML = CARD_PRESETS.map(c =>
+      `<button class="swatch ${c === s.card ? 'on' : ''}" style="--c:${c}" data-card="${c}" aria-label="Riquadri ${c}"></button>`).join('');
+  }
+  function setSetting(key, value) {
+    state.settings = { ...(state.settings || {}), [key]: value };
+    save();
+  }
+  $('#themeSeg').addEventListener('click', e => {
+    const b = e.target.closest('[data-theme-opt]');
+    if (b) setSetting('theme', b.dataset.themeOpt);
+  });
+  $('#seasonSel').addEventListener('change', e => setSetting('season', e.target.value));
+  $('#cardSwatches').addEventListener('click', e => {
+    const b = e.target.closest('[data-card]');
+    if (b) setSetting('card', b.dataset.card);
+  });
+  $('#cardPicker').addEventListener('input', e => setSetting('card', e.target.value));
+  $('#cardReset').addEventListener('click', () => setSetting('card', null));
+
+  // Colore del riquadro di una singola attività: anteprima mentre si sceglie, salvataggio alla conferma.
+  function bindCardColor(container, findItem) {
+    container.addEventListener('input', e => {
+      if (e.target.dataset.act !== 'card-bg') return;
+      const card = e.target.closest('.card');
+      Object.entries(cardVarMap(e.target.value)).forEach(([k, v]) => card.style.setProperty(k, v));
+    });
+    container.addEventListener('change', e => {
+      if (e.target.dataset.act !== 'card-bg') return;
+      findItem(e.target).cardBg = e.target.value;
+      save();
+    });
+  }
+  bindCardColor($('#categories'), el => state.categories.find(c => c.id === el.closest('[data-cat]').dataset.cat));
+  bindCardColor($('#longList'), el => state.longTerm.find(l => l.id === el.closest('[data-lt]').dataset.lt));
+  $('#editBtn').addEventListener('click', () => {
+    const on = document.body.classList.toggle('editing');
+    $('#editBtn').textContent = on ? 'Fatto' : 'Modifica';
+    $('#editBtn').classList.toggle('primary', on);
+  });
+
+  // Backup
+  $('#exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `questweek-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  $('#importBtn').addEventListener('click', () => $('#importFile').click());
+  $('#importFile').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!Array.isArray(data.categories) || !Array.isArray(data.goals)) throw new Error('formato');
+      const ok = await openDialog({ title: 'Importare il backup?', text: 'I dati attuali verranno sostituiti.', okText: 'Importa', danger: true });
+      if (ok !== null) {
+        state = Object.assign(defaultState(), data);
+        save();
+        toast('Backup importato');
+      }
+    } catch { toast('File di backup non valido'); }
+    e.target.value = '';
+  });
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // Nuova settimana mentre l'app è aperta: ricontrolla quando torna in primo piano
+  let shownWeek = isoWeek().key;
+  // Stato che dipende solo dal tempo (giorno corrente, metà settimana): se cambia, ridisegna
+  // badge delle scadenze e umore del draghetto. Controllo leggero, una volta al minuto.
+  const timeKey = () => `${todayIdx()}|${weekFraction() > 0.5}`;
+  let shownTime = timeKey();
+  function checkTime() {
+    if (document.visibilityState !== 'visible') return;
+    if (isoWeek().key !== shownWeek) { shownWeek = isoWeek().key; shownTime = timeKey(); save(); return; }
+    if (timeKey() !== shownTime) { shownTime = timeKey(); renderWeek(); }
+  }
+  document.addEventListener('visibilitychange', checkTime);
+  setInterval(checkTime, 60000);
+
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  save();
+})();
+</script>
+</body>
+</html>
