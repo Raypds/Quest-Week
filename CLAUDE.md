@@ -59,8 +59,11 @@ Il backup Esporta/Importa (Impostazioni) salva l'intero `state` in JSON.
 - Testo utente nell'HTML sempre tramite `esc()`.
 - Interfaccia e messaggi in italiano. Layout mobile-first (prova a 375px): barra schede fissa in basso, gutter 16px.
 - Rispetta `prefers-reduced-motion` per le animazioni nuove.
-- Prima di testare nel browser salva una copia dei dati dell'utente e ripristinala dopo:
-  `sessionStorage.setItem('backup-test', localStorage.getItem('obiettivi-settimanali-v1'))` → test → ripristino.
+- **Test nel browser: usa il server `obiettivi-test` (porta 8766), non la 8765.** Sulla 8765 l'utente può essere connesso
+  alla sincronizzazione: dati di prova creati lì finiscono nel suo account reale e sul telefono (è già successo).
+  La porta 8766 è un'origine separata, senza accesso né dati dell'utente. Se proprio devi usare la 8765, controlla prima
+  `localStorage['questweek-auth']`: se c'è una sessione, non creare dati di prova e non ripristinare copie di localStorage
+  (annullerebbero modifiche già sincronizzate).
 
 ## Versioni (Git)
 

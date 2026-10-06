@@ -55,7 +55,7 @@
   button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 6px 8px; }
   button.danger { color: var(--danger); }
   input[type=text], input[type=number], input[type=email], input[type=password] { font: inherit; color: var(--text); background: var(--field, var(--bg));
-    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; max-width: 100%; }
   .card, nav.tabs { color: var(--text); }
   .card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); transition: background-color .3s;
     padding: 16px; margin: 12px 0; }
@@ -100,7 +100,9 @@
     padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); z-index: 10; }
   nav.tabs .inner { display: flex; gap: 4px; max-width: 720px; width: 100%; }
   nav.tabs button { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--muted); font-size: .7rem;
-    padding: 4px 0; white-space: nowrap; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    padding: 4px 0; line-height: 1.1; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  /* Schermi molto stretti: etichette più piccole, "Lungo termine" può andare su due righe */
+  @media (max-width: 360px) { nav.tabs button { font-size: .62rem; } nav.tabs svg { width: 20px; height: 20px; } }
   nav.tabs svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; }
   nav.tabs button.on { color: var(--accent); font-weight: 700; }
@@ -250,7 +252,7 @@
     <div id="longList"></div>
     <div class="card">
       <strong>Nuovo obiettivo a lungo termine</strong>
-      <form id="addLongForm" style="display:grid; gap:8px; margin-top:10px">
+      <form id="addLongForm" style="display:grid; grid-template-columns:minmax(0, 1fr); gap:8px; margin-top:10px">
         <input type="text" id="ltTitle" placeholder="es. Corso Arduino" required>
         <div class="row">
           <input type="number" id="ltCurrent" class="grow" placeholder="Attuale" min="0" step="any" value="0">
