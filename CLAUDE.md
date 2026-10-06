@@ -51,6 +51,13 @@ Il backup Esporta/Importa (Impostazioni) salva l'intero `state` in JSON.
 - Prima di testare nel browser salva una copia dei dati dell'utente e ripristinala dopo:
   `sessionStorage.setItem('backup-test', localStorage.getItem('obiettivi-settimanali-v1'))` → test → ripristino.
 
+## Versioni (Git)
+
+- Repository locale, ramo `main`, autore già configurato nel progetto.
+- Dopo ogni modifica verificata nel browser fai un commit con messaggio in italiano che descriva il cambiamento dal punto di vista dell'utente.
+- Se `git` non è nel PATH, usa `C:\Program Files\Git\cmd\git.exe`.
+- Per annullare una modifica preferisci `git revert` (crea una nuova versione) a comandi distruttivi.
+
 ## Prossimi passi previsti
 
 - Sincronizzazione tra dispositivi con lo stesso account (Supabase o Firebase, piano gratuito; "ultima modifica vince").
