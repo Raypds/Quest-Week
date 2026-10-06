@@ -65,10 +65,13 @@ Il backup Esporta/Importa (Impostazioni) salva l'intero `state` in JSON.
 ## Versioni (Git)
 
 - Repository locale, ramo `main`, autore già configurato nel progetto.
-- Dopo ogni modifica verificata nel browser fai un commit con messaggio in italiano che descriva il cambiamento dal punto di vista dell'utente.
+- Dopo ogni modifica verificata nel browser fai un commit e, se l'utente è d'accordo, `git push` per pubblicarla con messaggio in italiano che descriva il cambiamento dal punto di vista dell'utente.
 - Se `git` non è nel PATH, usa `C:\Program Files\Git\cmd\git.exe`.
 - Per annullare una modifica preferisci `git revert` (crea una nuova versione) a comandi distruttivi.
 
-## Prossimi passi previsti
+## Pubblicazione
 
-- Pubblicazione online (GitHub Pages o Netlify) per installarla sul telefono.
+- Online su **https://raypds.github.io/Quest-Week/** (GitHub Pages dal ramo `main`, cartella root).
+- Repository pubblico: https://github.com/Raypds/Quest-Week — non mettere mai nel progetto dati personali o chiavi segrete.
+- Pubblicare = `git push`: Pages si aggiorna in 1–2 minuti; il service worker network-first fa arrivare la nuova versione ai dispositivi alla prima apertura online.
+- Dopo il push verifica che il sito risponda (es. `curl -s -o /dev/null -w "%{http_code}" https://raypds.github.io/Quest-Week/`).

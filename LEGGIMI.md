@@ -2,6 +2,14 @@
 
 App web per tracciare gli obiettivi settimanali e a lungo termine, con una sezione appunti. Funziona offline e si installa sul telefono come app (PWA).
 
+**Indirizzo:** https://raypds.github.io/Quest-Week/
+
+- **iPhone:** apri l'indirizzo con Safari → Condividi → "Aggiungi alla schermata Home".
+- **Android:** apri con Chrome → menu ⋮ → "Installa app".
+- **Computer:** apri con Chrome o Edge → icona "Installa" nella barra degli indirizzi.
+
+Poi in **Impostazioni → Sincronizzazione** accedi con il tuo account per avere gli stessi dati ovunque.
+
 ## File
 
 | File | Cosa contiene |
