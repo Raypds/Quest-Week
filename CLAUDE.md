@@ -30,6 +30,8 @@ Struttura (vedi `defaultState()`):
 - `notes[]` `{ id, title, html, createdAt, updatedAt }` — HTML già sanificato
 - `settings` `{ bg, card, theme: 'auto'|'light'|'dark', season: 'auto'|'autumn'|'winter'|'spring'|'summer'|'' }`
 
+Altre chiavi locali: `questweek-auth` (sessione Supabase), `questweek-sync` (`since`, `pending`, `lastSync`).
+
 I dati vecchi possono non avere i campi nuovi: usa default (`?? 'auto'`, `|| []`), non dare per scontato che esistano.
 Il backup Esporta/Importa (Impostazioni) salva l'intero `state` in JSON.
 
@@ -41,6 +43,15 @@ Il backup Esporta/Importa (Impostazioni) salva l'intero `state` in JSON.
 - `checkTime()` ogni minuto: ridisegna solo se cambia giorno/metà settimana/settimana.
 - Colori: il tema usa variabili CSS su `:root`; colore riquadri generale scritto in `<style id="cardTheme">`; colore per singola attività inline via `cardVars()`. `isDark()` sceglie testo chiaro/scuro.
 - Appunti: `contenteditable` + `document.execCommand`. **Tutto l'HTML passa da `sanitize()`** (allowlist in `ALLOWED`) all'incolla e al caricamento: non inserire mai HTML degli appunti senza sanificarlo.
+
+## Sincronizzazione (Supabase)
+
+- Progetto `vcjncsguylsjksvclqvi`; URL e chiave **publishable** (pubblica) in `index.html` (`SB_URL`, `SB_KEY`). Mai inserire chiavi `secret`/`service_role`.
+- Niente libreria: `fetch` diretto a `/auth/v1` (email + password; niente magic link perché nella PWA installata il link si aprirebbe nel browser) e `/rest/v1`.
+- Schema in `supabase/schema.sql`: tabella `items (user_id, key, data, updated_at, server_at)` con RLS e funzione `push_items` che sovrascrive solo se `updated_at` è più recente.
+- `flatten()` divide lo stato in pezzi (`cat:`, `goal:`, `lt:`, `note:`, `done:<settimana>:<goal>`, `snap:<settimana>`, `settings:main`); `unflatten()` li ricompone. **Se aggiungi un nuovo tipo di dato a `state`, aggiungilo anche a entrambe**, altrimenti non si sincronizza.
+- `persist()` → `trackChanges()` segna i pezzi cambiati in `pending`; `syncNow()` invia i pending poi scarica le righe con `server_at` più recente. Dati arrivati dal cloud si applicano con `applyMap()` (non `persist`, per non rimandarli indietro).
+- Test: non usare l'account reale; simula Supabase sovrascrivendo `window.fetch` nella pagina (vedi storia del commit della sincronizzazione).
 
 ## Regole importanti
 
@@ -60,5 +71,4 @@ Il backup Esporta/Importa (Impostazioni) salva l'intero `state` in JSON.
 
 ## Prossimi passi previsti
 
-- Sincronizzazione tra dispositivi con lo stesso account (Supabase o Firebase, piano gratuito; "ultima modifica vince").
 - Pubblicazione online (GitHub Pages o Netlify) per installarla sul telefono.

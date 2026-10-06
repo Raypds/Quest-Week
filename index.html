@@ -54,7 +54,7 @@
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 6px 8px; }
   button.danger { color: var(--danger); }
-  input[type=text], input[type=number] { font: inherit; color: var(--text); background: var(--field, var(--bg));
+  input[type=text], input[type=number], input[type=email], input[type=password] { font: inherit; color: var(--text); background: var(--field, var(--bg));
     border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
   .card, nav.tabs { color: var(--text); }
   .card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); transition: background-color .3s;
@@ -327,6 +327,28 @@
 
   <!-- IMPOSTAZIONI -->
   <section id="tab-settings" hidden>
+    <div class="card" id="syncCard">
+      <strong>Sincronizzazione</strong>
+      <div id="syncOut">
+        <p class="sub" style="margin:6px 0 12px">Accedi con lo stesso account su computer e telefono per avere gli stessi dati ovunque. Senza accesso l'app funziona lo stesso, ma solo su questo dispositivo.</p>
+        <form id="loginForm" style="display:grid; gap:8px">
+          <input type="email" id="syncEmail" placeholder="Email" autocomplete="email" required>
+          <input type="password" id="syncPass" placeholder="Password (almeno 6 caratteri)" autocomplete="current-password" minlength="6" required>
+          <div class="row">
+            <button type="submit" class="primary" data-mode="login">Accedi</button>
+            <button type="submit" data-mode="signup">Crea account</button>
+          </div>
+        </form>
+      </div>
+      <div id="syncIn" hidden>
+        <p style="margin:8px 0 4px">Connesso come <b id="syncUser"></b></p>
+        <p class="sub" id="syncStatus" style="margin:0 0 12px"></p>
+        <div class="row">
+          <button id="syncNowBtn">Sincronizza ora</button>
+          <button id="logoutBtn" class="danger">Esci</button>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <strong>Tema</strong>
       <div class="seg" id="themeSeg">
@@ -459,10 +481,16 @@
   let state = load();
   if (!Array.isArray(state.notes)) state.notes = [];
   // Scrive i dati senza ridisegnare (usato dall'editor degli appunti mentre si scrive)
-  function persist() {
-    state.updatedAt = Date.now();
+  function writeLocal() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; }
     catch (e) { toast('Impossibile salvare: spazio esaurito'); return false; }
+  }
+  // Salva una modifica dell'utente e la segna da sincronizzare (vedi "Sincronizzazione")
+  function persist() {
+    state.updatedAt = Date.now();
+    const ok = writeLocal();
+    if (ok) trackChanges();
+    return ok;
   }
   function save() {
     snapshotCurrentWeek();
@@ -525,7 +553,7 @@
   // ---- Finestra di dialogo interna ----
   // confirm()/prompt() del browser non funzionano in alcuni contesti (webview, alcune PWA):
   // restituiscono subito "Annulla". Usiamo un <dialog> nostro che restituisce una Promise.
-  function openDialog({ title, text = '', fields = [], okText = 'OK', danger = false }) {
+  function openDialog({ title, text = '', fields = [], okText = 'OK', cancelText = 'Annulla', danger = false }) {
     const dlg = $('#dlg');
     $('#dlgTitle').textContent = title;
     $('#dlgText').textContent = text;
@@ -541,6 +569,7 @@
     const ok = $('#dlgOk');
     ok.textContent = okText;
     ok.className = danger ? 'danger-fill' : 'primary';
+    $('#dlgCancel').textContent = cancelText;
     return new Promise(resolve => {
       const finish = val => {
         $('#dlgForm').onsubmit = null; $('#dlgCancel').onclick = null; dlg.oncancel = null;
@@ -1253,6 +1282,315 @@
   }
   document.addEventListener('visibilitychange', checkTime);
   setInterval(checkTime, 60000);
+
+  // ---- Sincronizzazione (Supabase) ----
+  // I dati sono divisi in "pezzi" indipendenti (una categoria, un obiettivo, una spunta, un appunto…),
+  // ognuno con la data dell'ultima modifica. In caso di conflitto sullo stesso pezzo vince la modifica
+  // più recente; modifiche a pezzi diversi su dispositivi diversi si sommano senza perdersi.
+  // Tabella e funzione lato server: supabase/schema.sql
+  const SB_URL = 'https://vcjncsguylsjksvclqvi.supabase.co';
+  const SB_KEY = 'sb_publishable_6Bq-9u9Y1Wahb06-mvh3Zw_e5Tqg1Pf'; // chiave pubblica: può stare nell'app
+  const AUTH_KEY = 'questweek-auth', SYNC_KEY = 'questweek-sync';
+
+  const readJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const writeJSON = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  let session = readJSON(AUTH_KEY, null);         // { access_token, refresh_token, expires_at, user: { id, email } }
+  let syncMeta = readJSON(SYNC_KEY, null);        // { userId, since, pending: { key: modificatoIlMs }, lastSync }
+  if (syncMeta && syncMeta.userId !== session?.user?.id) syncMeta = null;
+  let syncing = false, syncTimer = null, syncError = '';
+
+  // JSON con chiavi ordinate: due copie uguali dello stesso pezzo producono sempre la stessa stringa
+  const canon = v => Array.isArray(v) ? `[${v.map(canon).join(',')}]`
+    : v && typeof v === 'object' ? `{${Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',')}}`
+    : JSON.stringify(v ?? null);
+
+  function flatten(s) {
+    const m = {};
+    (s.categories || []).forEach((c, i) => (m['cat:' + c.id] = canon({ ...c, _o: i })));
+    (s.goals || []).forEach((g, i) => (m['goal:' + g.id] = canon({ ...g, _o: i })));
+    (s.longTerm || []).forEach((l, i) => (m['lt:' + l.id] = canon({ ...l, _o: i })));
+    (s.notes || []).forEach(n => (m['note:' + n.id] = canon(n)));
+    Object.entries(s.weeks || {}).forEach(([wk, w]) => {
+      Object.entries(w.done || {}).forEach(([gid, cid]) => (m[`done:${wk}:${gid}`] = canon({ c: cid })));
+      if (w.snapshot?.length) m['snap:' + wk] = canon(w.snapshot);
+    });
+    m['settings:main'] = canon(s.settings || {});
+    return m;
+  }
+  function unflatten(m) {
+    const s = defaultState();
+    Object.assign(s, { categories: [], goals: [], longTerm: [], notes: [], weeks: {}, updatedAt: state.updatedAt });
+    const week = wk => (s.weeks[wk] ||= { done: {}, snapshot: [] });
+    for (const [k, json] of Object.entries(m)) {
+      const v = JSON.parse(json);
+      const [kind, a, b] = k.split(':');
+      if (kind === 'cat') s.categories.push(v);
+      else if (kind === 'goal') s.goals.push(v);
+      else if (kind === 'lt') s.longTerm.push(v);
+      else if (kind === 'note') s.notes.push(v);
+      else if (kind === 'done') week(a).done[b] = v.c;
+      else if (kind === 'snap') week(a).snapshot = v;
+      else if (kind === 'settings') s.settings = { ...s.settings, ...v };
+    }
+    for (const list of [s.categories, s.goals, s.longTerm]) {
+      list.sort((x, y) => (x._o ?? 0) - (y._o ?? 0));
+      list.forEach(x => delete x._o);
+    }
+    return s;
+  }
+
+  let lastLocal = flatten(state);
+  // Chiamata a ogni salvataggio: segna i pezzi cambiati come "da inviare"
+  function trackChanges() {
+    const cur = flatten(state);
+    if (session && syncMeta) {
+      const now = Date.now();
+      let changed = false;
+      for (const k of new Set([...Object.keys(cur), ...Object.keys(lastLocal)])) {
+        if (cur[k] !== lastLocal[k]) { syncMeta.pending[k] = now; changed = true; }
+      }
+      if (changed) { writeJSON(SYNC_KEY, syncMeta); scheduleSync(2000); }
+    }
+    lastLocal = cur;
+  }
+  // Applica dati arrivati dal cloud senza segnarli come modifiche locali
+  function applyMap(m) {
+    state = unflatten(m);
+    lastLocal = flatten(state);
+    writeLocal();
+    render();
+    if (!$('#tab-notes').hidden && $('#noteEditor').hidden) renderNotesList();
+  }
+
+  // -- Richieste a Supabase --
+  function authError(j, status) {
+    const msg = (j.error_description || j.msg || j.message || j.error || '').toLowerCase();
+    if (msg.includes('invalid login')) return 'Email o password sbagliate.';
+    if (msg.includes('already registered') || msg.includes('already exists')) return 'Esiste già un account con questa email: usa “Accedi”.';
+    if (msg.includes('password')) return 'La password deve avere almeno 6 caratteri.';
+    if (msg.includes('email not confirmed')) return 'Conferma prima l’email: controlla la posta.';
+    if (msg.includes('rate limit') || status === 429) return 'Troppi tentativi, riprova tra qualche minuto.';
+    return j.error_description || j.msg || j.message || `Errore ${status}`;
+  }
+  async function authReq(path, body) {
+    const r = await fetch(`${SB_URL}/auth/v1/${path}`, {
+      method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) { const e = new Error(authError(j, r.status)); e.status = r.status; throw e; }
+    return j;
+  }
+  function setSession(j) {
+    session = j && j.access_token ? {
+      access_token: j.access_token, refresh_token: j.refresh_token,
+      expires_at: j.expires_at || Math.floor(Date.now() / 1000) + (j.expires_in || 3600),
+      user: { id: j.user?.id ?? session?.user?.id, email: j.user?.email ?? session?.user?.email },
+    } : null;
+    writeJSON(AUTH_KEY, session);
+  }
+  async function freshToken(force) {
+    if (!session) throw new Error('Non connesso');
+    if (force || session.expires_at - 60 < Date.now() / 1000) {
+      try { setSession(await authReq('token?grant_type=refresh_token', { refresh_token: session.refresh_token })); }
+      catch (e) {
+        if (e.status === 400 || e.status === 401) { signOutLocal(); throw new Error('Sessione scaduta: accedi di nuovo.'); }
+        throw e;
+      }
+    }
+    return session.access_token;
+  }
+  async function api(path, opts = {}, retried) {
+    const token = await freshToken();
+    const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+      ...opts, headers: { apikey: SB_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    });
+    if (r.status === 401 && !retried) { await freshToken(true); return api(path, opts, true); }
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      if (['PGRST202', 'PGRST205', '42P01', '42883'].includes(j.code) || r.status === 404) throw new Error('Il database non è ancora pronto (manca supabase/schema.sql).');
+      throw new Error(j.message || `Errore del server (${r.status})`);
+    }
+    return r.status === 204 ? null : r.json().catch(() => null);
+  }
+  async function pullSince(since) {
+    const rows = [];
+    for (let from = 0; ; from += 1000) {
+      const q = `items?select=key,data,updated_at,server_at&order=server_at.asc&limit=1000&offset=${from}`
+        + (since ? `&server_at=gt.${encodeURIComponent(since)}` : '');
+      const page = await api(q);
+      rows.push(...page);
+      if (page.length < 1000) return rows;
+    }
+  }
+  async function push(keys, cur) {
+    const items = keys.map(k => ({ key: k, data: k in cur ? JSON.parse(cur[k]) : null, updated_at: syncMeta.pending[k] }));
+    for (let i = 0; i < items.length; i += 200) {
+      await api('rpc/push_items', { method: 'POST', body: JSON.stringify({ items: items.slice(i, i + 200) }) });
+    }
+  }
+  const hasOwnContent = () => state.goals.length || state.longTerm.length || state.notes.length;
+  // Ultimo istante ricevuto meno 5 secondi: margine per salvataggi arrivati quasi insieme (riapplicarli non cambia nulla)
+  const nextSince = rows => {
+    const last = rows.reduce((m, r) => (r.server_at > m ? r.server_at : m), syncMeta.since || '');
+    return last ? new Date(new Date(last).getTime() - 5000).toISOString() : '';
+  };
+
+  // Primo collegamento di questo dispositivo all'account
+  async function firstSync(userId) {
+    flushNote();
+    syncMeta = { userId, since: '', pending: {}, lastSync: 0 };
+    const rows = (await pullSince('')).filter(r => r.data !== null);
+    const now = Date.now();
+    const markAllLocal = () => Object.keys(flatten(state)).forEach(k => (syncMeta.pending[k] = now));
+    if (!rows.length) {
+      markAllLocal(); // cloud vuoto: questo dispositivo fa da punto di partenza
+    } else {
+      let merge = false;
+      if (hasOwnContent()) {
+        merge = (await openDialog({
+          title: 'Ci sono già dati nel cloud',
+          text: 'Vuoi tenere solo i dati del cloud, oppure aggiungere anche gli obiettivi e gli appunti di questo dispositivo?',
+          okText: 'Usa i dati del cloud', cancelText: 'Unisci',
+        })) === null;
+      }
+      const m = {};
+      rows.forEach(r => (m[r.key] = canon(r.data)));
+      if (merge) {
+        // Categorie con lo stesso nome diventano una sola: gli obiettivi locali passano a quella del cloud
+        const cloudCat = {};
+        Object.entries(m).forEach(([k, v]) => { if (k.startsWith('cat:')) cloudCat[JSON.parse(v).name.trim().toLowerCase()] = k.slice(4); });
+        const remap = {};
+        state.categories.forEach(c => { const id = cloudCat[c.name.trim().toLowerCase()]; if (id) remap[c.id] = id; });
+        for (const [k, v] of Object.entries(flatten(state))) {
+          if (k === 'settings:main' || k.startsWith('snap:')) continue;
+          if (k.startsWith('cat:') && remap[k.slice(4)]) continue;
+          const o = JSON.parse(v);
+          if (k.startsWith('goal:') && remap[o.categoryId]) o.categoryId = remap[o.categoryId];
+          if (k.startsWith('done:') && remap[o.c]) o.c = remap[o.c];
+          m[k] = canon(o);
+          syncMeta.pending[k] = now;
+        }
+      }
+      syncMeta.since = nextSince(rows);
+      applyMap(m);
+    }
+    writeJSON(SYNC_KEY, syncMeta);
+  }
+
+  async function syncNow() {
+    if (syncing || !session || !navigator.onLine) { updateSyncUI(); return; }
+    syncing = true; syncError = ''; updateSyncUI();
+    try {
+      if (!syncMeta) await firstSync(session.user.id);
+      // 1) invia le modifiche locali
+      const keys = Object.keys(syncMeta.pending);
+      if (keys.length) {
+        const sent = { ...syncMeta.pending };
+        await push(keys, flatten(state));
+        keys.forEach(k => { if (syncMeta.pending[k] === sent[k]) delete syncMeta.pending[k]; });
+        writeJSON(SYNC_KEY, syncMeta);
+      }
+      // 2) ricevi quelle degli altri dispositivi
+      const rows = await pullSince(syncMeta.since);
+      const m = flatten(state);
+      let changed = false;
+      for (const r of rows) {
+        if (syncMeta.pending[r.key] > r.updated_at) continue; // qui c'è una modifica più recente, da inviare
+        const v = r.data === null ? undefined : canon(r.data);
+        if (m[r.key] !== v) { if (v === undefined) delete m[r.key]; else m[r.key] = v; changed = true; }
+      }
+      syncMeta.since = nextSince(rows);
+      syncMeta.lastSync = Date.now();
+      writeJSON(SYNC_KEY, syncMeta);
+      if (changed) {
+        const editing = openNoteId && document.activeElement && $('#noteEditor').contains(document.activeElement);
+        if (editing) flushNote(); // l'appunto aperto resta com'è sullo schermo
+        applyMap(m);
+      }
+    } catch (e) {
+      // fetch fallisce con TypeError quando il server non è raggiungibile (es. Wi-Fi senza internet)
+      syncError = !navigator.onLine ? '' : e instanceof TypeError ? 'Server non raggiungibile: riprovo tra poco.' : e.message;
+    } finally {
+      syncing = false;
+      updateSyncUI();
+      if (syncMeta && Object.keys(syncMeta.pending).length && !syncError) scheduleSync(5000);
+    }
+  }
+  function scheduleSync(ms) {
+    if (!session) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, ms);
+  }
+
+  function signOutLocal() {
+    session = null; syncMeta = null;
+    writeJSON(AUTH_KEY, null); writeJSON(SYNC_KEY, null);
+    updateSyncUI();
+  }
+  function updateSyncUI() {
+    $('#syncOut').hidden = !!session;
+    $('#syncIn').hidden = !session;
+    if (!session) return;
+    $('#syncUser').textContent = session.user.email || '';
+    const pending = syncMeta ? Object.keys(syncMeta.pending).length : 0;
+    const when = syncMeta?.lastSync ? new Date(syncMeta.lastSync).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    $('#syncStatus').textContent =
+      syncing ? 'Sincronizzazione in corso…'
+      : syncError ? '⚠️ ' + syncError
+      : !navigator.onLine ? `Offline: ${pending ? pending + ' modifiche verranno inviate' : 'i dati verranno inviati'} appena torna la connessione.`
+      : pending ? `${pending} modifiche da inviare…`
+      : when ? `✓ Tutto sincronizzato · ultimo controllo ${when}` : '';
+    $('#syncStatus').style.color = syncError ? 'var(--danger)' : '';
+  }
+
+  $('#loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const mode = e.submitter?.dataset.mode || 'login';
+    const email = $('#syncEmail').value.trim(), password = $('#syncPass').value;
+    const buttons = $('#loginForm').querySelectorAll('button');
+    buttons.forEach(b => (b.disabled = true));
+    try {
+      const j = mode === 'signup'
+        ? await authReq('signup', { email, password })
+        : await authReq('token?grant_type=password', { email, password });
+      if (!j.access_token) {
+        toast('Account creato: conferma l’email dal messaggio ricevuto, poi premi “Accedi”.');
+        return;
+      }
+      setSession(j);
+      $('#syncPass').value = '';
+      if (syncMeta?.userId !== session.user.id) syncMeta = null;
+      updateSyncUI();
+      await syncNow();
+      if (!syncError) toast('Sincronizzazione attiva ✓');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      buttons.forEach(b => (b.disabled = false));
+    }
+  });
+  $('#syncNowBtn').addEventListener('click', () => syncNow());
+  $('#logoutBtn').addEventListener('click', async () => {
+    const pending = syncMeta ? Object.keys(syncMeta.pending).length : 0;
+    const ok = await openDialog({
+      title: 'Uscire dall’account?',
+      text: (pending ? `Ci sono ${pending} modifiche non ancora inviate al cloud. ` : '')
+        + 'I dati restano su questo dispositivo, ma smettono di sincronizzarsi.',
+      okText: 'Esci', danger: true,
+    });
+    if (ok === null) return;
+    const token = session?.access_token;
+    signOutLocal();
+    fetch(`${SB_URL}/auth/v1/logout`, { method: 'POST', headers: { apikey: SB_KEY, Authorization: 'Bearer ' + token } }).catch(() => {});
+  });
+  // Quando sincronizzare: all'avvio, al ritorno in primo piano, al ritorno della connessione, e ogni minuto
+  window.addEventListener('online', () => syncNow());
+  window.addEventListener('offline', updateSyncUI);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') scheduleSync(300); });
+  setInterval(() => { if (document.visibilityState === 'visible') syncNow(); }, 60000);
+  updateSyncUI();
+  scheduleSync(500);
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
