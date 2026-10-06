@@ -7,8 +7,10 @@ L'utente non è uno sviluppatore: parla in italiano, spiega le modifiche in modo
 ## File
 
 - `index.html` — tutta l'app: CSS in `<style>`, markup, JS in un'unica IIFE in fondo. Niente framework.
-- `draghetto.js` — web component `<drago-mascotte>` fornito dall'utente (attributi `mood`, `season`; metodo `celebrate()`). Trattalo come asset esterno: se l'utente ne manda una nuova versione, sostituisci il file intero.
-- `sw.js` — service worker network-first: online carica sempre la versione nuova, offline usa la cache.
+- `draghetto.js` — web component `<drago-mascotte>` fornito dall'utente (attributi `mood`, `season`; metodo `celebrate()`).
+  **Contiene aggiunte nostre**: scene tristi di autunno/primavera (`RAIN`, classi `.rain`, `.pfh`/`.pfs` zucca, `.lid` gufo, `.fl` fiori).
+  Se l'utente manda una nuova versione, confrontala con `diff`: se è identica dillo; se è diversa, riporta queste aggiunte nella nuova (o chiedi).
+- `sw.js` — service worker network-first con `cache: 'no-cache'` (salta la cache HTTP del browser/GitHub Pages, così gli aggiornamenti arrivano subito); offline usa la cache.
   **Ogni file nuovo che l'app carica va aggiunto ad `ASSETS`**, e incrementa `CACHE` quando cambi l'elenco.
 - `manifest.json`, `icons/` — nome "Quest Week" e icone PWA (generate da `icons/logo-originale.webp`; le `maskable` hanno gli angoli riempiti di verde).
 - `LEGGIMI.md` — guida per l'utente.
