@@ -8,7 +8,6 @@
 //   drago.season = 'winter';     // 'autumn' | 'winter' | 'spring' | 'summer' | '' (nessuna)
 //   drago.season = 'auto';       // stagione scelta in base alla data di oggi
 //   drago.celebrate();           // piroetta di festa (es. obiettivo completato)
-// Triste in autunno e primavera: nuvoletta con pioggia, zucca triste e gufo assonnato / fiori afflosciati.
 
 (function () {
   const MOODS = ['happy', 'sad', 'angry'];
@@ -83,20 +82,12 @@ svg{width:100%;height:auto;display:block;overflow:hidden}
 @keyframes rot{to{transform:rotate(360deg)}}
 @keyframes orbitL{0%,100%{transform:translate(0,0) rotate(0)}20%{transform:translate(90px,-22px) rotate(10deg)}40%{transform:translate(175px,60px) rotate(20deg)}60%{transform:translate(90px,135px) rotate(0)}80%{transform:translate(-40px,70px) rotate(-15deg)}}
 @keyframes piro{0%{transform:none}15%{transform:translateY(-20px) scaleX(1)}30%{transform:translateY(-34px) scaleX(.05)}45%{transform:translateY(-40px) scaleX(-1)}60%{transform:translateY(-34px) scaleX(.05)}75%{transform:translateY(-20px) scaleX(1)}100%{transform:none}}
-/* Triste in autunno e primavera: nuvoletta con pioggia, zucca triste, gufo assonnato, fiori afflosciati, uccellino fermo */
-.rain,.lid,.pfs{display:none}
-.sad.autumn .rain,.sad.spring .rain,.sad.autumn .lid,.sad .pfs{display:inline}
-.sad .pfh{display:none}
-.cel.sad .rain{display:none}
-.cloud{animation:drift 4s ease-in-out infinite}
-.drop{animation:rainfall .9s linear infinite}
-.sad.autumn .owl{animation:none;transform:translateY(3px)}
-.sad.autumn .fall{animation-duration:15s!important}
-.fl{transform-box:fill-box;transform-origin:50% 100%;transition:transform .8s ease,opacity .8s}
-.sad.spring .fl{transform:rotate(-24deg);opacity:.7}.sad.spring .fl:nth-child(even){transform:rotate(24deg)}
-.sad.spring .bird{animation:none;transform:translateY(4px) rotate(10deg)}
-@keyframes drift{50%{transform:translateX(5px)}}
-@keyframes rainfall{from{transform:translateY(0);opacity:1}to{transform:translateY(36px);opacity:0}}
+.walker{display:none}
+.spring.sad .wsp,.autumn.sad .wau{display:inline;animation:walk 10s linear infinite}
+.spring.sad .bird,.autumn.sad .owl{visibility:hidden}
+.waddle{transform-box:fill-box;transform-origin:50% 100%;animation:wad .45s ease-in-out infinite alternate}
+@keyframes walk{0%{transform:translateX(0);opacity:0}5%{opacity:1}95%{opacity:1}100%{transform:translateX(-500px);opacity:0}}
+@keyframes wad{from{transform:rotate(-5deg)}to{transform:rotate(5deg) translateY(-2px)}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 `;
 
@@ -113,7 +104,7 @@ svg{width:100%;height:auto;display:block;overflow:hidden}
       const r = a * Math.PI / 180;
       return `<circle cx="${(x + 6*Math.cos(r)).toFixed(1)}" cy="${(y + 6*Math.sin(r)).toFixed(1)}" r="5" fill="${c}"/>`;
     }).join('');
-    return `<g class="fl"><path d="M${x} ${y} V${y+22}" stroke="#3E9C72" stroke-width="3"/><path d="M${x} ${y+14} Q${x+9} ${y+8} ${x+11} ${y+13} Q${x+5} ${y+17} ${x} ${y+14} Z" fill="#4FAE82"/>${petals}<circle cx="${x}" cy="${y}" r="4" fill="${mid}"/></g>`;
+    return `<path d="M${x} ${y} V${y+22}" stroke="#3E9C72" stroke-width="3"/><path d="M${x} ${y+14} Q${x+9} ${y+8} ${x+11} ${y+13} Q${x+5} ${y+17} ${x} ${y+14} Z" fill="#4FAE82"/>${petals}<circle cx="${x}" cy="${y}" r="4" fill="${mid}"/>`;
   };
   const FLOWERS = [[212,318,'#E24B4A','#F2C230'],[240,328,'#ED93B1','#F2C230'],[268,320,'#F2C230','#E07B2A'],[412,324,'#7F77DD','#F2C230'],[440,316,'#E24B4A','#F2C230'],[468,328,'#378ADD','#F2C230'],[496,320,'#ED93B1','#F2C230']]
     .map(([x,y,c,m]) => flower(x,y,c,m)).join('');
@@ -180,15 +171,11 @@ ${gift(196,318,28,26,'#E24B4A','#F2C230')}${gift(228,328,22,16,'#378ADD','#fff')
 </g></g>`;
 
   const BIRD = '<path d="M388 44 L376 38 L381 50 Z" fill="#185FA5"/><ellipse cx="400" cy="44" rx="14" ry="10" fill="#378ADD"/><circle cx="412" cy="34" r="8" fill="#378ADD"/><ellipse cx="402" cy="47" rx="8" ry="5" fill="#B5D4F4"/><path class="bw" d="M392 42 Q400 36 406 44 Q398 48 392 42 Z" fill="#185FA5"/><polygon points="419,32 427,35 419,37" fill="#EF9F27"/><circle cx="414" cy="31" r="1.8" fill="#0E2A1E"/><path d="M398 53 V57 M404 53 V57" stroke="#EF9F27" stroke-width="2"/>';
-  const OWL = '<ellipse cx="278" cy="38" rx="13" ry="15" fill="#8A5A34"/><polygon points="267,30 265,17 274,26" fill="#8A5A34"/><polygon points="289,30 291,17 282,26" fill="#8A5A34"/><ellipse cx="278" cy="44" rx="8" ry="8" fill="#D9B98A"/><ellipse class="bw" cx="266" cy="41" rx="4" ry="9" fill="#6B4226"/><ellipse class="bw" cx="290" cy="41" rx="4" ry="9" fill="#6B4226"/><circle cx="273" cy="31" r="5" fill="#F2C230"/><circle cx="283" cy="31" r="5" fill="#F2C230"/><circle cx="273" cy="31" r="2.3" fill="#1a1a1a"/><circle cx="283" cy="31" r="2.3" fill="#1a1a1a"/><path class="lid" d="M267.5 32 A5.5 5.5 0 0 1 278.5 32 Z M277.5 32 A5.5 5.5 0 0 1 288.5 32 Z" fill="#6B4226"/><polygon points="276,35 280,35 278,40" fill="#E07B2A"/><path d="M274 53 V57 M282 53 V57" stroke="#E07B2A" stroke-width="2"/>';
+  const OWL = '<ellipse cx="278" cy="38" rx="13" ry="15" fill="#8A5A34"/><polygon points="267,30 265,17 274,26" fill="#8A5A34"/><polygon points="289,30 291,17 282,26" fill="#8A5A34"/><ellipse cx="278" cy="44" rx="8" ry="8" fill="#D9B98A"/><ellipse class="bw" cx="266" cy="41" rx="4" ry="9" fill="#6B4226"/><ellipse class="bw" cx="290" cy="41" rx="4" ry="9" fill="#6B4226"/><circle cx="273" cy="31" r="5" fill="#F2C230"/><circle cx="283" cy="31" r="5" fill="#F2C230"/><circle cx="273" cy="31" r="2.3" fill="#1a1a1a"/><circle cx="283" cy="31" r="2.3" fill="#1a1a1a"/><polygon points="276,35 280,35 278,40" fill="#E07B2A"/><path d="M274 53 V57 M282 53 V57" stroke="#E07B2A" stroke-width="2"/>';
   // compagni che girano intorno al drago durante celebrate()
   const pal = (inner, ang) => `<g transform="rotate(${ang} 340 200)"><g class="orb"><g transform="rotate(${-ang} 340 50)"><g class="ctr">${inner}</g></g></g></g>`;
   const PALS_SP = [0,120,240].map(a => pal(`<g transform="translate(-62 6)">${BIRD}</g>`, a)).join('');
   const PALS_AU = [0,120,240].map(a => pal(`<g transform="translate(62 12)">${OWL}</g>`, a)).join('');
-
-  const RAIN = `<g class="rain" transform="translate(340 38) scale(1.35) translate(-340 -30)"><g class="cloud"><ellipse cx="340" cy="36" rx="32" ry="11" fill="#9AA4AE"/><circle cx="324" cy="30" r="11" fill="#9AA4AE"/><circle cx="345" cy="24" r="14" fill="#A9B2BA"/><circle cx="361" cy="31" r="9" fill="#9AA4AE"/></g>`
-    + [[318,0],[331,.45],[344,.2],[357,.65],[325,.8],[351,.35]].map(([x,d]) => `<path class="drop" d="M${x} 48 l-2 7" stroke="#6FA8DC" stroke-width="3" stroke-linecap="round" style="animation-delay:-${d}s"/>`).join('')
-    + '</g>';
 
   const SVG = `
 <svg viewBox="75 5 555 355" role="img" aria-label="Draghetto mascotte">
@@ -200,7 +187,7 @@ ${gift(196,318,28,26,'#E24B4A','#F2C230')}${gift(228,328,22,16,'#378ADD','#fff')
 <g class="se su">${SUMMER_PROPS}</g>
 <g id="drg">
 <g id="tail"><path d="M398 290 Q470 320 500 272" fill="none" stroke="#5BBE8E" stroke-width="24" stroke-linecap="round"/><path class="nau" d="M490 278 Q504 252 520 242 Q518 268 506 288 Z" fill="#1F6B4E"/>
-<g class="se au" transform="translate(506 264) scale(1.4) translate(-506 -264)"><ellipse cx="494" cy="264" rx="9" ry="13" fill="#D86A1E"/><ellipse cx="518" cy="264" rx="9" ry="13" fill="#D86A1E"/><ellipse cx="506" cy="264" rx="11" ry="14" fill="#EF8A2A"/><rect x="503" y="246" width="6" height="7" rx="2" fill="#3E7D3A"/><g class="pfh"><polygon points="497,259 503,259 500,253" fill="#3A1A08"/><polygon points="509,259 515,259 512,253" fill="#3A1A08"/><path d="M496 267 L500 271 L504 267 L508 271 L512 267 L516 267 Q506 279 496 267 Z" fill="#3A1A08"/></g><g class="pfs"><polygon points="496,255 503,257 500,261" fill="#3A1A08"/><polygon points="516,255 509,257 512,261" fill="#3A1A08"/><path d="M498 274 Q506 266 514 274" fill="none" stroke="#3A1A08" stroke-width="2.5" stroke-linecap="round"/></g></g></g>
+<g class="se au" transform="translate(506 264) scale(1.4) translate(-506 -264)"><ellipse cx="494" cy="264" rx="9" ry="13" fill="#D86A1E"/><ellipse cx="518" cy="264" rx="9" ry="13" fill="#D86A1E"/><ellipse cx="506" cy="264" rx="11" ry="14" fill="#EF8A2A"/><rect x="503" y="246" width="6" height="7" rx="2" fill="#3E7D3A"/><polygon points="497,259 503,259 500,253" fill="#3A1A08"/><polygon points="509,259 515,259 512,253" fill="#3A1A08"/><path d="M496 267 L500 271 L504 267 L508 271 L512 267 L516 267 Q506 279 496 267 Z" fill="#3A1A08"/></g></g>
 <g id="wl"><path d="M304 222 L198 142 Q214 172 202 184 Q226 188 218 206 Q242 206 252 228 Z" fill="#E9DC9A" stroke="#3E9C72" stroke-width="5" stroke-linejoin="round"/></g>
 <g id="wr"><path d="M376 222 L482 142 Q466 172 478 184 Q454 188 462 206 Q438 206 428 228 Z" fill="#E9DC9A" stroke="#3E9C72" stroke-width="5" stroke-linejoin="round"/></g>
 <g id="bod">
@@ -239,10 +226,11 @@ ${gift(196,318,28,26,'#E24B4A','#F2C230')}${gift(228,328,22,16,'#378ADD','#fff')
 </g>
 </g>
 <g class="se au">${LEAVES}</g>
-${RAIN}
 <g class="se wi">${SNOW}</g>
 <g class="pals psp">${PALS_SP}</g>
 <g class="pals pau">${PALS_AU}</g>
+<g class="walker wsp"><g transform="translate(188 287)"><g transform="translate(804 0) scale(-1 1)"><g class="waddle">${BIRD}</g></g></g></g>
+<g class="walker wau"><g transform="translate(312 287)"><g class="waddle">${OWL}</g></g></g>
 </svg>`;
 
   class DragoMascotte extends HTMLElement {
