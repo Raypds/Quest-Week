@@ -39,7 +39,7 @@ Il backup Esporta/Importa (Impostazioni) salva l'intero `state` in JSON.
 
 - `save()` = snapshot settimana + `persist()` + `render()` (ridisegna tutto). `persist()` scrive senza ridisegnare: usalo dove un re-render distruggerebbe ciò che l'utente sta toccando (editor appunti, selettori colore durante il trascinamento).
 - `render()` → `applyAppearance()`, `applyBackground()`, `renderWeek()` (chiama `updateMascot()`), `renderLong()`, `renderHistory()`. Gli appunti hanno `renderNotesList()` a parte.
-- Umore draghetto (`updateMascot`): arrabbiato se una scadenza è mancata > felice da 70% > triste sotto 40% dopo metà settimana > felice. `celebrate()` quando si spunta un obiettivo o un lungo termine arriva al 100%.
+- Umore draghetto (`updateMascot`): arrabbiato se da giovedì ore 12 ci sono almeno 4 missioni scadute non completate (`ANGRY_MIN_MISSED`) > triste se ieri c'erano scadenze non rispettate (`missedYesterday`, il lunedì guarda la domenica precedente) > felice. `celebrate()` quando si spunta un obiettivo o un lungo termine arriva al 100%.
 - `checkTime()` ogni minuto: ridisegna solo se cambia giorno/metà settimana/settimana.
 - Colori: il tema usa variabili CSS su `:root`; colore riquadri generale scritto in `<style id="cardTheme">`; colore per singola attività inline via `cardVars()`. `isDark()` sceglie testo chiaro/scuro.
 - Appunti: `contenteditable` + `document.execCommand`. **Tutto l'HTML passa da `sanitize()`** (allowlist in `ALLOWED`) all'incolla e al caricamento: non inserire mai HTML degli appunti senza sanificarlo.

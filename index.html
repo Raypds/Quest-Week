@@ -527,7 +527,19 @@
   }
 
   // ---- Draghetto: umore in base all'avanzamento ----
-  // arrabbiato se una scadenza è mancata, felice dal 70%, triste sotto il 40% dopo metà settimana.
+  // arrabbiato: da giovedì alle 12, se almeno 4 missioni con scadenza sono scadute senza essere completate;
+  // triste: se ieri c'erano scadenze non rispettate (il lunedì guarda la domenica della settimana prima);
+  // felice: in tutti gli altri casi.
+  const ANGRY_MIN_MISSED = 4;
+  function missedYesterday() {
+    const t = todayIdx();
+    if (t > 1) {
+      const w = currentWeek();
+      return state.goals.filter(g => g.due === t - 1 && !w.done[g.id]).length;
+    }
+    const prev = state.weeks[isoWeek(new Date(Date.now() - 7 * 864e5)).key];
+    return prev ? state.goals.filter(g => g.due === 7 && !prev.done[g.id]).length : 0;
+  }
   function updateMascot() {
     const drago = $('#drago');
     if (!drago) return;
@@ -535,11 +547,15 @@
     const total = state.goals.length;
     const p = pct(state.goals.filter(g => w.done[g.id]).length, total);
     const missed = state.goals.filter(g => isMissed(g, w)).length;
+    const yesterday = missedYesterday();
     let mood = 'happy', msg;
     if (!total) msg = 'Aggiungi i tuoi obiettivi della settimana!';
-    else if (missed) { mood = 'angry'; msg = `Scadenza mancata: ${missed} ${missed > 1 ? 'obiettivi' : 'obiettivo'}!`; }
+    else if (missed >= ANGRY_MIN_MISSED && weekFraction() > 0.5) {
+      mood = 'angry'; msg = `${missed} missioni scadute e non completate!`;
+    } else if (yesterday) {
+      mood = 'sad'; msg = yesterday === 1 ? 'Ieri una scadenza non è stata rispettata… oggi si recupera!' : `Ieri ${yesterday} scadenze non sono state rispettate… oggi si recupera!`;
+    }
     else if (p >= 70) msg = p === 100 ? 'Settimana completata! 🎉' : 'Ottimo lavoro, continua così!';
-    else if (p < 40 && weekFraction() > 0.5) { mood = 'sad'; msg = 'Siamo oltre metà settimana… recuperiamo!'; }
     else msg = 'Un obiettivo alla volta.';
     if (drago.mood !== mood) drago.mood = mood;
     // 'auto' viene ricalcolato dalla data a ogni aggiornamento (anche al cambio di giorno)
