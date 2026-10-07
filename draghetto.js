@@ -7,11 +7,18 @@
 //   drago.mood = 'sad';          // 'happy' | 'sad' | 'angry'
 //   drago.season = 'winter';     // 'autumn' | 'winter' | 'spring' | 'summer' | '' (nessuna)
 //   drago.season = 'auto';       // stagione scelta in base alla data di oggi
+//   drago.time = 'auto';         // 'day' | 'night' | 'auto' (sole o luna in base all'ora) | '' (nessuno)
 //   drago.celebrate();           // piroetta di festa (es. obiettivo completato)
 
 (function () {
   const MOODS = ['happy', 'sad', 'angry'];
   const SEASONS = ['autumn', 'winter', 'spring', 'summer'];
+
+  const TIMES = ['day', 'night'];
+  function timeFromDate(d = new Date()) {
+    const h = d.getHours();
+    return h >= 7 && h < 19 ? 'day' : 'night'; // giorno dalle 7:00 alle 18:59
+  }
 
   function seasonFromDate(d = new Date()) {
     const m = d.getMonth(); // 0 = gennaio
@@ -92,6 +99,17 @@ svg{width:100%;height:auto;display:block;overflow:hidden}
 @keyframes spk{0%{fill:#1a1a1a;filter:none}42.857%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}50%{fill:#1a1a1a;filter:none}57.143%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}64.286%{fill:#1a1a1a;filter:none}71.429%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}78.571%{fill:#1a1a1a;filter:none}85.714%{fill:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}92.857%{fill:#1a1a1a;filter:none}100%{fill:#1a1a1a;filter:none}}
 .spook2{color:#1a1a1a;fill:currentColor;animation:spk2 7s step-end infinite}
 @keyframes spk2{0%{color:#1a1a1a;filter:none}50%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}57.143%{color:#1a1a1a;filter:none}64.286%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}71.429%{color:#1a1a1a;filter:none}78.571%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}85.714%{color:#1a1a1a;filter:none}92.857%{color:#F2C230;filter:drop-shadow(0 0 4px #F2C230)}100%{color:#1a1a1a;filter:none}}
+.tday,.tnight{display:none}.day .tday,.night .tnight{display:inline}
+.rays{transform-box:fill-box;transform-origin:center;animation:spin 18s linear infinite}
+.twk{animation:twk 2.4s ease-in-out infinite}
+@keyframes twk{50%{opacity:.25}}
+.fullmoon,.bats{display:none}.autumn.night .fullmoon,.autumn.night .bats{display:inline}.autumn.night .crescent{display:none}
+.fullmoon .disc{filter:drop-shadow(0 0 6px #F7EBC0)}
+.cld{animation:drift 10s ease-in-out infinite alternate}.cld2{animation-duration:13s;animation-delay:-5s}
+@keyframes drift{from{transform:translateX(-55px)}to{transform:translateX(55px)}}
+.bo{animation:rot 5s linear infinite}.bo2{animation-duration:6.5s;animation-direction:reverse}
+.bwing{transform-box:fill-box;transform-origin:50% 100%;animation:bflap .16s ease-in-out infinite alternate}
+@keyframes bflap{to{transform:scaleY(.25)}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 `;
 
@@ -187,6 +205,20 @@ ${face}`;
   const FUNNY_FACE = (x) => `<g class="spook2"><circle cx="${x-9}" cy="240" r="6"/><circle cx="${x+9}" cy="243" r="3.5"/><path d="M${x-8} 232 L${x-15} 229 M${x+5} 236 L${x+13} 233" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><ellipse cx="${x+1}" cy="252" rx="2.5" ry="2"/><path d="M${x-14} 262 Q${x} 282 ${x+14} 259 Q${x} 270 ${x-14} 262 Z"/><path d="M${x+2} 270 Q${x+6} 280 ${x+10} 266 Z"/></g>`;
   const TREES_AU = bareTree(140, SPOOKY_FACE(140)) + bareTree(565, FUNNY_FACE(565));
 
+  // cielo: sole di giorno, luna e stelle di notte
+  const SUN = `<g class="rays">${[0,45,90,135,180,225,270,315].map(a => `<rect x="512" y="10" width="6" height="12" rx="3" fill="#F2C230" transform="rotate(${a} 515 42)"/>`).join('')}</g><circle cx="515" cy="42" r="19" fill="#F7D046"/><circle cx="515" cy="42" r="14" fill="#FAE08A"/>`;
+  const star = (x, y, r, d) => `<path class="twk" style="animation-delay:-${d}s" d="M${x} ${y-r} Q${x} ${y} ${x+r} ${y} Q${x} ${y} ${x} ${y+r} Q${x} ${y} ${x-r} ${y} Q${x} ${y} ${x} ${y-r} Z" fill="#F2C230"/>`;
+  const MOON = `<g class="crescent"><mask id="luna"><circle cx="515" cy="42" r="20" fill="#fff"/><circle cx="526" cy="35" r="17" fill="#000"/></mask><circle cx="515" cy="42" r="20" fill="#F5E6A8" mask="url(#luna)"/></g>`
+    + [[190,24,6,0],[226,62,4,.8],[450,20,5,1.6],[472,74,4,.4],[598,26,6,1.2],[150,108,4,2],[548,92,4,.6]].map(([x,y,r,d]) => star(x,y,r,d)).join('');
+
+  // notte d'autunno: luna piena con nuvole che scorrono e pipistrelli intorno agli alberi
+  const cloud = (x, y, k) => `<ellipse cx="${x}" cy="${y}" rx="${24*k}" ry="${8*k}"/><circle cx="${x-9*k}" cy="${y-5*k}" r="${9*k}"/><circle cx="${x+6*k}" cy="${y-8*k}" r="${11*k}"/>`;
+  const FULL_MOON = `<g class="fullmoon"><circle class="disc" cx="515" cy="42" r="23" fill="#F7EBC0"/><circle cx="506" cy="35" r="4.5" fill="#E8D9A6"/><circle cx="523" cy="49" r="5.5" fill="#E8D9A6"/><circle cx="521" cy="32" r="2.5" fill="#E8D9A6"/><circle cx="505" cy="51" r="2" fill="#E8D9A6"/>
+<g class="cld" fill="#9AA3B5" opacity=".92">${cloud(512, 30, 1)}</g><g class="cld cld2" fill="#8790A3" opacity=".9">${cloud(522, 60, .85)}</g></g>`;
+  const bat = (x, y) => `<g fill="#1a1a1a"><path class="bwing" d="M${x} ${y} Q${x-6} ${y-8} ${x-16} ${y-5} Q${x-11} ${y-1} ${x-13} ${y+3} Q${x-6} ${y} ${x} ${y+3} Z"/><path class="bwing" d="M${x} ${y} Q${x+6} ${y-8} ${x+16} ${y-5} Q${x+11} ${y-1} ${x+13} ${y+3} Q${x+6} ${y} ${x} ${y+3} Z"/><ellipse cx="${x}" cy="${y+1}" rx="3" ry="4.5"/><path d="M${x-3} ${y-2} L${x-2.5} ${y-7} L${x} ${y-3} L${x+2.5} ${y-7} L${x+3} ${y-2} Z"/></g>`;
+  const batRing = (cx, cy, r, cls, delays) => delays.map(d => `<g class="bo ${cls}" style="transform-origin:${cx}px ${cy}px;animation-delay:-${d}s">${bat(cx, cy - r)}</g>`).join('');
+  const BATS = batRing(140, 112, 52, '', [0, 2.5]) + batRing(565, 108, 50, 'bo2', [0, 2.2, 4.4]);
+
   // compagni che girano intorno al drago durante celebrate()
   const pal = (inner, ang) => `<g transform="rotate(${ang} 340 200)"><g class="orb"><g transform="rotate(${-ang} 340 50)"><g class="ctr">${inner}</g></g></g></g>`;
   const PALS_SP = [0,120,240].map(a => pal(`<g transform="translate(-62 6)">${BIRD}</g>`, a)).join('');
@@ -195,7 +227,10 @@ ${face}`;
   const SVG = `
 <svg viewBox="75 5 555 355" role="img" aria-label="Draghetto mascotte">
 <defs><clipPath id="tana"><rect x="500" y="240" width="100" height="104"/></clipPath></defs>
+<g class="tday">${SUN}</g>
+<g class="tnight">${MOON}${FULL_MOON}</g>
 <g class="se au">${TREES_AU}</g>
+<g class="bats">${BATS}</g>
 <ellipse cx="340" cy="345" rx="95" ry="10" fill="#1F6B4E" opacity=".18"/>
 <g class="se sp">${FLOWERS}</g>
 <g class="se au">${MUSHROOMS}</g>
@@ -250,7 +285,7 @@ ${face}`;
 </svg>`;
 
   class DragoMascotte extends HTMLElement {
-    static get observedAttributes() { return ['mood', 'season']; }
+    static get observedAttributes() { return ['mood', 'season', 'time']; }
 
     constructor() {
       super();
@@ -274,6 +309,17 @@ ${face}`;
     }
     set season(value) { this.setAttribute('season', value || ''); }
 
+    get time() {
+      const t = this.getAttribute('time');
+      if (t === 'auto') return timeFromDate();
+      return TIMES.includes(t) ? t : '';
+    }
+    set time(value) { this.setAttribute('time', value || ''); }
+
+    // ricontrolla ogni minuto, così 'auto' cambia da solo all'alba e al tramonto
+    connectedCallback() { this._tick = setInterval(() => this._apply(), 60000); }
+    disconnectedCallback() { clearInterval(this._tick); }
+
     attributeChangedCallback() { this._apply(); }
 
     // Piroetta di festa (con gufi o uccellini che girano intorno in autunno e primavera).
@@ -287,7 +333,7 @@ ${face}`;
 
     _apply() {
       const cel = this._st.classList.contains('cel');
-      this._st.className = [this.mood, this.season, cel ? 'cel' : ''].filter(Boolean).join(' ');
+      this._st.className = [this.mood, this.season, this.time, cel ? 'cel' : ''].filter(Boolean).join(' ');
     }
   }
 

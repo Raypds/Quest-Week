@@ -7,7 +7,7 @@ L'utente non è uno sviluppatore: parla in italiano, spiega le modifiche in modo
 ## File
 
 - `index.html` — tutta l'app: CSS in `<style>`, markup, JS in un'unica IIFE in fondo. Niente framework.
-- `draghetto.js` — web component `<drago-mascotte>` fornito dall'utente (attributi `mood`, `season`; metodo `celebrate()`).
+- `draghetto.js` — web component `<drago-mascotte>` fornito dall'utente (attributi `mood`, `season`, `time` — in `index.html` `season="auto" time="auto"`; metodo `celebrate()`).
   È il file dell'utente **senza modifiche nostre**: quando ne manda una nuova versione, sostituisci il file intero.
   Prima confrontala con `diff`: se è identica a quella attuale, diglielo (può aver allegato il file sbagliato).
 - `sw.js` — service worker network-first con `cache: 'no-cache'` (salta la cache HTTP del browser/GitHub Pages, così gli aggiornamenti arrivano subito); offline usa la cache.
